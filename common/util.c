@@ -1,18 +1,8 @@
 #include "comm.h"
 #include <stdarg.h>
+#include <time.h>
 
 BOOL_T g_bIsDebugMode = BOOL_FALSE;
-
-BOOL_T IsVaildStock(IN ULONG ulCode)
-{
-    if (((600000 <= ulCode) && (ulCode < 602000)) ||
-        ((603000 <= ulCode) && (ulCode < 604000)) ||
-        ((     1 <= ulCode) && (ulCode <   3000)) ||   
-        ((300001 <= ulCode) && (ulCode < 300500)))
-        return BOOL_TRUE;
-    else
-        return BOOL_FALSE;
-}
 
 #define DEBUG_BUF_SIZE      (1024)
 
@@ -62,4 +52,16 @@ ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S 
 
     return (ULONG)iMid;
 }
+
+ULONG GetCurrentDate(VOID)
+{
+    time_t RawTime; 
+    struct tm LocalTime;
+    
+    time(&RawTime); 
+    localtime_s (&LocalTime, &RawTime);
+
+    return DATE_ASSEMBLE(LocalTime.tm_year, LocalTime.tm_mon, LocalTime.tm_mday);
+}
+
 
