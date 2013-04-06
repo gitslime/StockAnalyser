@@ -90,7 +90,6 @@ typedef struct tagWholeData
 ULONG GetCurrentDate(VOID);
 
 ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry);
-ULONG FILE_GetFileData(IN ULONG ulStockCode, IN CHAR *szDir, IN ULONG ulFileType, OUT VOID **ppFileData);
 
 #endif
 

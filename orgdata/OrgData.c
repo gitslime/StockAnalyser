@@ -1,69 +1,5 @@
-#include "comm.h"
-
-
-
-
-
-
-
-
-
-
-
-
-ULONG FILE_WeightDate2Price(IN ULONG ulWeightDate)
-{
-#define FILE_WEIGHT_GET_YEAR(ulDate)    (((ulDate) & 0xFFF00000) >> 20)
-#define FILE_WEIGHT_GET_MONTH(ulDate)   (((ulDate) & 0x000F0000) >> 16)
-#define FILE_WEIGHT_GET_DAY(ulDate)     (((ulDate) & 0x0000F800) >> 11)
-
-    ULONG ulYear  = FILE_WEIGHT_GET_YEAR(ulWeightDate);
-    ULONG ulMonth = FILE_WEIGHT_GET_MONTH(ulWeightDate);
-    ULONG ulDay   = FILE_WEIGHT_GET_DAY(ulWeightDate);
-
-    return ((ulYear * 10000) + (ulMonth * 100) + ulDay);
-}
-
-ULONG FILE_Weight2Factor(IN FILE_WEIGHT_DATA_S *pstWeight, OUT FACTOR_S *pstFactor)
-{
-    BOOL_T bVaild;
-    FLOAT fMultiTemp, fAdderTemp;
-
-    bVaild = BOOL_FALSE;
-    fMultiTemp = 1;
-    fAdderTemp = 0;
-
-    if (0 != pstWeight->ulProfit) {
-        fAdderTemp = (FLOAT)(pstWeight->ulProfit / 10);
-        bVaild = BOOL_TRUE;
-    }
-
-    if ((0 != pstWeight->ulAdd) || (0 != pstWeight->ulGift) || (0 != pstWeight->ulOffer)) {
-        fMultiTemp  = ((FLOAT)(pstWeight->ulAdd + pstWeight->ulGift + pstWeight->ulOffer + 100000) / 100000);
-        fAdderTemp -= (FLOAT)(pstWeight->ulOffer * pstWeight->ulOfferPrice / 100000);
-
-        bVaild = BOOL_TRUE;
-    }
-
-    if (BOOL_FALSE == bVaild) {
-        return 0;
-    }
-
-    // Check original data
-    if (FILE_VAILD_FACTOR == pstFactor->ulFlag) {
-        assert(pstFactor->fMulti == fMultiTemp);
-        assert(pstFactor->fAdder == fAdderTemp);
-
-        return 0;
-    }
-    
-    pstFactor->ulFlag = FILE_VAILD_FACTOR;
-    pstFactor->fMulti = fMultiTemp;
-    pstFactor->fAdder = fAdderTemp;
-
-    return 1;
-}
-
+#include "../common/comm.h"
+#include "../common/file.h"
 
 VOID FILE_EntryCheck(IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry)
 {
@@ -81,49 +17,36 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
     ULONG i,j;
     ULONG ulSrcEntryCnt, ulOgEntryCnt, ulTrgEntryCnt;
     ULONG ulRemainingCnt;
-    FILE_DAILY_DATA_S *astDailyData = NULL;
+    FILE_THS_DAILY_ENTRY_S *astDailyData = NULL;
+    FILE_THS_DAILY_ENTRY_S *pstDailyData = NULL;
     FILE_WHOLE_DATA_S *astOgData    = NULL;
-    FILE_WHOLE_DATA_S *astWholeData = NULL;
-    FILE_DAILY_DATA_S *pstDailyData = NULL;
     FILE_WHOLE_DATA_S *pstOgData    = NULL;
+    FILE_WHOLE_DATA_S *astWholeData = NULL;
     FILE_WHOLE_DATA_S *pstWholeData = NULL;
-    FILE *fpSrcFile = NULL;
-    FILE *fpTrgFile = NULL;
 
     assert(NULL != szSrcDir);
     assert(NULL != szTrgDir);
 
-    fpSrcFile = FILE_OpenDataWithoutHead(ulCode, szSrcDir, FILE_FLAG_DAY);
-    fpTrgFile = FILE_OpenDataWithoutHead(ulCode, szTrgDir, FILE_FLAG_ALL_R);
-    if ((NULL == fpSrcFile) || (NULL == fpTrgFile))
-        return;
+    //get source data and original data
+    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_THS_DAY, &astDailyData);
+    if (0==ulSrcEntryCnt) return;
+    
+    //original file maybe not exist
+    ulOgEntryCnt = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, &astOgData);
 
-    ulSrcEntryCnt = FILE_GetEntryCnt(fpSrcFile, FILE_FLAG_DAY);
-    ulOgEntryCnt  = FILE_GetEntryCnt(fpTrgFile, FILE_FLAG_ALL_R);
-    assert(0!=ulSrcEntryCnt);
-
-    astDailyData = malloc(sizeof(FILE_DAILY_DATA_S) * ulSrcEntryCnt);
-    astOgData    = malloc(sizeof(FILE_WHOLE_DATA_S) * MAX(ulOgEntryCnt, 1));    // at least one data
     astWholeData = malloc(sizeof(FILE_WHOLE_DATA_S) * (ulSrcEntryCnt+ulOgEntryCnt));
-    assert(NULL != astDailyData);
-    assert(NULL != astOgData);
     assert(NULL != astWholeData);
+    memset(astWholeData, 0xFF, sizeof(FILE_WHOLE_DATA_S) * (ulSrcEntryCnt+ulOgEntryCnt));
+
+    if (0 == ulOgEntryCnt) {
+        astOgData = malloc(sizeof(FILE_WHOLE_DATA_S));
+        assert(NULL != astOgData);
+        memset(astOgData, 0xFF, sizeof(FILE_WHOLE_DATA_S));
+    }
+
     pstDailyData = astDailyData;
     pstOgData    = astOgData;
     pstWholeData = astWholeData;
-    memset(astWholeData, 0xFF, sizeof(FILE_WHOLE_DATA_S) * (ulSrcEntryCnt+ulOgEntryCnt));
-
-    fread(astDailyData, sizeof(FILE_DAILY_DATA_S), ulSrcEntryCnt, fpSrcFile);
-    fclose(fpSrcFile);
-
-    if (0 != ulOgEntryCnt) {
-        fread(astOgData, sizeof(FILE_WHOLE_DATA_S), ulOgEntryCnt, fpTrgFile);
-    }
-    else {
-        memset(astOgData, 0xFF, sizeof(FILE_WHOLE_DATA_S));
-    }
-    fclose(fpTrgFile);
-
 
     // set daily price to target data
     for (i=0,j=0;i<ulSrcEntryCnt;i++,pstDailyData++) {
@@ -149,16 +72,8 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
             j++;
         }
         
-        //Set data no matter it is alread had
-        sprintf_s(pstWholeData->szComment, 16, "%d", pstDailyData->ulDate);
-        pstWholeData->ulDate = pstDailyData->ulDate;
-        pstWholeData->ulRsv  = INVAILD_ULONG;
-        pstWholeData->stDailyPrice.ulBegin = pstDailyData->ulBeginWithCheck - FILE_DATA_PRICE_CHK;
-        pstWholeData->stDailyPrice.ulHigh  = pstDailyData->ulHighWithCheck  - FILE_DATA_PRICE_CHK;
-        pstWholeData->stDailyPrice.ulLow   = pstDailyData->ulLowWithCheck   - FILE_DATA_PRICE_CHK;
-        pstWholeData->stDailyPrice.ulEnd   = pstDailyData->ulEndWithCheck   - FILE_DATA_PRICE_CHK;
-        pstWholeData->stDailyPrice.ulVol   = FILE_GetVol(pstDailyData->ulVolWithCheck);
-        pstWholeData->stDailyPrice.ulFlag  = FILE_VAILD_PRICE;
+        //Set data no matter it is already had
+        FILE_ThsDayToCustom(pstDailyData, pstWholeData);
         pstWholeData++;
     }
 
@@ -173,10 +88,8 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
     ulTrgEntryCnt = pstWholeData - astWholeData;
     FILE_EntryCheck(ulTrgEntryCnt, astWholeData);
 
-    // reopen for write
-    fpTrgFile = FILE_OpenDataWithoutHead(ulCode, szTrgDir, FILE_FLAG_ALL_W);
-    fwrite(astWholeData, sizeof(FILE_WHOLE_DATA_S), ulTrgEntryCnt, fpTrgFile);
-    fclose(fpTrgFile);
+    // write file
+    FILE_SetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, sizeof(FILE_WHOLE_DATA_S)*ulTrgEntryCnt,astWholeData);
     
     free(astDailyData);
     free(astOgData);
@@ -187,134 +100,52 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
 
 VOID FILE_UpdateMin30Price(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *szTrgDir)
 {
-    ULONG i, k;
-    ULONG ulSrcEntryCnt, ulOgEntryCnt, ulTrgEntryCnt;
-    ULONG ulRemainingCnt;
-    ULONG ulPrevDate, ulCurrDate;
-    ULONG ulMaxPrice, ulMinPrice, ulMin30Vol;
-    FILE_MIN5_DATA_S  *astMin5Data  = NULL;
+    ULONG i, j;
+    ULONG ulSrcEntryCnt, ulOgEntryCnt;
+    ULONG ulCurrDate;
+    FILE_THS_MIN5_ENTRY_S  *astMin5Data  = NULL;
+    FILE_THS_MIN5_ENTRY_S  *pstMin5Data  = NULL;
     FILE_WHOLE_DATA_S *astOgData    = NULL;
-    FILE_WHOLE_DATA_S *astWholeData = NULL;
-    FILE_MIN5_DATA_S  *pstMin5Data  = NULL;
     FILE_WHOLE_DATA_S *pstOgData    = NULL;
-    FILE_WHOLE_DATA_S *pstWholeData = NULL;
-    PRICE_S *pstMin30Price = NULL;
-    FILE *fpSrcFile = NULL;
-    FILE *fpTrgFile = NULL;
 
     assert(NULL != szSrcDir);
     assert(NULL != szTrgDir);
 
-    fpSrcFile = FILE_OpenDataWithoutHead(ulCode, szSrcDir, FILE_FLAG_MIN5);
-    fpTrgFile = FILE_OpenDataWithoutHead(ulCode, szTrgDir, FILE_FLAG_ALL_R);
-    if ((NULL == fpSrcFile) || (NULL == fpTrgFile))
-        return;
-
-    ulSrcEntryCnt = FILE_GetEntryCnt(fpSrcFile, FILE_FLAG_MIN5);
-    ulOgEntryCnt  = FILE_GetEntryCnt(fpTrgFile, FILE_FLAG_ALL_R);
-    assert(0!=ulSrcEntryCnt);
-
-    astMin5Data  = malloc(sizeof(FILE_MIN5_DATA_S) * ulSrcEntryCnt);
-    astOgData    = malloc(sizeof(FILE_WHOLE_DATA_S) * MAX(ulOgEntryCnt, 1));    // at least one data
-    astWholeData = malloc(sizeof(FILE_WHOLE_DATA_S) * (ulSrcEntryCnt+ulOgEntryCnt));
-    assert(NULL != astMin5Data);
-    assert(NULL != astOgData);
-    assert(NULL != astWholeData);
-    pstMin5Data  = astMin5Data;
-    pstOgData    = astOgData;
-    pstWholeData = astWholeData;
-    memset(astWholeData, 0xFF, sizeof(FILE_WHOLE_DATA_S) * (ulSrcEntryCnt+ulOgEntryCnt));
-
-    fread(astMin5Data, sizeof(FILE_MIN5_DATA_S), ulSrcEntryCnt, fpSrcFile);
-    fclose(fpSrcFile);
-
-    if (0 != ulOgEntryCnt) {
-        fread(astOgData, sizeof(FILE_WHOLE_DATA_S), ulOgEntryCnt, fpTrgFile);
-    }
-    else {
-        memset(astOgData, 0xFF, sizeof(FILE_WHOLE_DATA_S));
-    }
-    fclose(fpTrgFile);
-
-    // set min5 price to target data
-    for (i=0,k=0,ulPrevDate=0,
-         ulMaxPrice=0,ulMinPrice=0xFFFFFFFF,ulMin30Vol=0;
-         i<ulSrcEntryCnt;i++,pstMin5Data++) {
-        ulCurrDate = FILE_Min2Date(pstMin5Data->ulMin);
-
-        // copy original data before current day
-        // prevent min5 price is not continuous
-        while (((ULONG)(pstOgData-astOgData)<ulOgEntryCnt) && (pstOgData->ulDate < ulCurrDate)) {
-            memcpy(pstWholeData, pstOgData, sizeof(FILE_WHOLE_DATA_S));
-            pstOgData++;
-            pstWholeData++;
-        }
-
-        // new day begin
-        if (ulPrevDate != ulCurrDate) {
-            // make sure daily data already had
-            if (ulCurrDate != pstOgData->ulDate) {
-                printf("daily data of %d is not exist\n", ulCurrDate);
-                break;
-            }
-
-            memcpy(pstWholeData, pstOgData, sizeof(FILE_WHOLE_DATA_S));
-            pstMin30Price = pstWholeData->astMin30Price;
-
-            // shift to next day
-            ulPrevDate = ulCurrDate;
-            pstOgData++;
-            pstWholeData++;
-        }
-      
-        k++;
+    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_THS_MIN5, &astMin5Data);
+    if (0 == ulSrcEntryCnt) return;
     
-        /* get min&max price in the section */
-        if (ulMaxPrice < pstMin5Data->ulHighWithCheck) {
-            ulMaxPrice = pstMin5Data->ulHighWithCheck;
-        }
-        if (ulMinPrice > pstMin5Data->ulLowWithCheck) {
-            ulMinPrice = pstMin5Data->ulLowWithCheck;
+    ulOgEntryCnt  = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, &astOgData);
+    assert(0!=ulOgEntryCnt);
+
+    i = j = 0;
+    pstMin5Data = astMin5Data;
+    pstOgData   = astOgData;
+
+    // set min5 price to Original data
+    while (i<ulSrcEntryCnt) {
+        ulCurrDate = FILE_ThsMin2Date(pstMin5Data->ulMin);
+
+        // get current date's entry in original data
+        // price maybe not continuous
+        for (;j<ulOgEntryCnt;j++,pstOgData++) {
+            if (ulCurrDate == pstOgData->ulDate) break;
         }
 
-        ulMin30Vol += FILE_GetVol(pstMin5Data->ulVolWithCheck);
-
-        if (1 == k) {
-            pstMin30Price->ulBegin = pstMin5Data->ulBeginWithCheck - FILE_DATA_PRICE_CHK;
+        if (ulCurrDate != pstOgData->ulDate) {
+            //min 5 date is not in the original date
+            printf("daily entry of %d is not exist\n", ulCurrDate);
+            break;
         }
 
-        /* 30min = 6 * 5min */
-        if (6 == k) {
-            pstMin30Price->ulHigh = ulMaxPrice - FILE_DATA_PRICE_CHK;
-            pstMin30Price->ulLow  = ulMinPrice - FILE_DATA_PRICE_CHK;
-            pstMin30Price->ulEnd  = pstMin5Data->ulEndWithCheck - FILE_DATA_PRICE_CHK;
-            pstMin30Price->ulVol  = ulMin30Vol+3; /* each data have 0.5 offset */
-            pstMin30Price->ulFlag = FILE_VAILD_PRICE;
-
-            pstMin30Price++;
-            ulMin30Vol = 0;
-            k = 0;
-            ulMaxPrice = 0;
-            ulMinPrice = 0xFFFFFFFF;
-        }
+        i += FILE_ThsMin5ToMin30(pstMin5Data, pstOgData);
+        pstMin5Data=astMin5Data+i;
     }
-
-    // add remaining original data
-    ulRemainingCnt = ulOgEntryCnt-(pstOgData-astOgData);
-    if (0 != ulRemainingCnt) {
-        memcpy(pstWholeData, pstOgData, ulRemainingCnt*sizeof(FILE_WHOLE_DATA_S));
-        pstWholeData += ulRemainingCnt;
-    }
-
-    // reopen for write
-    ulTrgEntryCnt = pstWholeData - astWholeData;
-    fpTrgFile = FILE_OpenDataWithoutHead(ulCode, szTrgDir, FILE_FLAG_ALL_W);
-    fwrite(astWholeData, sizeof(FILE_WHOLE_DATA_S), ulTrgEntryCnt, fpTrgFile);
-    fclose(fpTrgFile);
+    
+    // write file
+    FILE_SetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, sizeof(FILE_WHOLE_DATA_S)*ulOgEntryCnt, astOgData);
     
     free(astMin5Data);
     free(astOgData);
-    free(astWholeData);
     
     return;
 }
@@ -322,11 +153,11 @@ VOID FILE_UpdateMin30Price(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
 VOID FILE_UpdateWeight(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *szTrgDir)
 {
     ULONG i;
-    ULONG ulPriceDate, ulOffset, ulUpdateCnt;
+    ULONG ulDate, ulOffset, ulUpdateCnt;
     ULONG ulSrcEntryCnt, ulOgEntryCnt;
-    FILE_WEIGHT_DATA_S *astWgtData = NULL;
+    FILE_QL_WEIGHT_ENTRY_S *astWgtData = NULL;
     FILE_WHOLE_DATA_S  *astOgData  = NULL;
-    FILE_WEIGHT_DATA_S *pstWgtData = NULL;
+    FILE_QL_WEIGHT_ENTRY_S *pstWgtData = NULL;
     FILE_WHOLE_DATA_S  *pstOgData  = NULL;
     FILE *fpSrcFile = NULL;
     FILE *fpTrgFile = NULL;
@@ -334,43 +165,27 @@ VOID FILE_UpdateWeight(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *
     assert(NULL != szSrcDir);
     assert(NULL != szTrgDir);
 
-    fpSrcFile = FILE_OpenDataWithoutHead(ulCode, szSrcDir, FILE_FLAG_WGT);
-    fpTrgFile = FILE_OpenDataWithoutHead(ulCode, szTrgDir, FILE_FLAG_ALL_R);
-    if ((NULL == fpSrcFile) || (NULL == fpTrgFile))
-        return;
+    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_QL_WGT, &astWgtData);
+    if (0 == ulSrcEntryCnt) return;
 
-    ulSrcEntryCnt = FILE_GetEntryCnt(fpSrcFile, FILE_FLAG_WGT);
-    ulOgEntryCnt  = FILE_GetEntryCnt(fpTrgFile, FILE_FLAG_ALL_R);
-    assert(0!=ulSrcEntryCnt);
-    assert(0!=ulOgEntryCnt);        //no sense to get weight without price
-
-    astWgtData   = malloc(sizeof(FILE_WEIGHT_DATA_S) * ulSrcEntryCnt);
-    astOgData    = malloc(sizeof(FILE_WHOLE_DATA_S)  * ulOgEntryCnt);
-    assert(NULL != astWgtData);
-    assert(NULL != astOgData);
+    ulOgEntryCnt  = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, &astOgData);
+    assert(0!=ulOgEntryCnt);
+    
     pstWgtData   = astWgtData;
     pstOgData    = astOgData;
-
-    fread(astWgtData, sizeof(FILE_WEIGHT_DATA_S), ulSrcEntryCnt, fpSrcFile);
-    fclose(fpSrcFile);
-
-    fread(astOgData, sizeof(FILE_WHOLE_DATA_S), ulOgEntryCnt, fpTrgFile);
-    fclose(fpTrgFile);
-
     for (i=0,ulUpdateCnt=0;i<ulSrcEntryCnt;i++,pstWgtData++) {
-        ulPriceDate = FILE_WeightDate2Price(pstWgtData->ulDate);
-        ulOffset = GetIndexByDate(ulPriceDate,ulOgEntryCnt,astOgData);
+        ulDate = FILE_QlDate2Custom(pstWgtData->ulQlDate);
+        ulOffset = GetIndexByDate(ulDate,ulOgEntryCnt,astOgData);
         if (INVAILD_ULONG == ulOffset) continue;
 
         pstOgData = astOgData + ulOffset;
-        ulUpdateCnt += FILE_Weight2Factor(pstWgtData, &(pstOgData->stFactor));
+        ulUpdateCnt += FILE_QlWeightToCustom(pstWgtData, pstOgData);
     }
 
     if (0 != ulUpdateCnt) {
-        // reopen for write
-        fpTrgFile = FILE_OpenDataWithoutHead(ulCode, szTrgDir, FILE_FLAG_ALL_W);
-        fwrite(astOgData, sizeof(FILE_WHOLE_DATA_S), ulOgEntryCnt, fpTrgFile);
-        fclose(fpTrgFile);
+        // write file
+        FILE_SetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, 
+                         sizeof(FILE_WHOLE_DATA_S)*ulOgEntryCnt, astOgData);
     }
     
     free(astWgtData);
@@ -378,7 +193,6 @@ VOID FILE_UpdateWeight(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *
 
     return;
 }
-
 
 int main(int argc,char *argv[]) 
 {

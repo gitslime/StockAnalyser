@@ -54,6 +54,9 @@ ULONG FILE_Date2ThsMin(IN ULONG ulDate);
 ULONG FILE_ThsMin5ToMin30(IN FILE_THS_MIN5_ENTRY_S *pstMin5, OUT FILE_WHOLE_DATA_S *pstWhole);
 VOID FILE_ThsDayToCustom(IN FILE_THS_DAILY_ENTRY_S *pstDay, OUT FILE_WHOLE_DATA_S *pstWhole);
 ULONG FILE_QlWeightToCustom(IN FILE_QL_WEIGHT_ENTRY_S *pstWeight, OUT FILE_WHOLE_DATA_S *pstWhole);
+VOID FILE_SetFileData(IN ULONG ulStockCode,IN const CHAR *szDir,IN ULONG ulFileType,IN ULONG ulSetLen,IN VOID *pFileData);
+ULONG FILE_GetFileData(IN ULONG ulStockCode, IN const CHAR *szDir, IN ULONG ulFileType, OUT VOID **ppFileData);
+ULONG FILE_QlDate2Custom(IN ULONG ulWeightDate);
 
 
 #endif

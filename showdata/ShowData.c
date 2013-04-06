@@ -108,7 +108,7 @@ VOID ShowThsMin30(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_THS_MIN5_ENTRY_S
     ulShowMin = FILE_Date2ThsMin(ulDate);
 
     for (i=0;i<ulEntryCnt;i++,pstEntry++) {
-        if (pstEntry->ulMin > ulDate) break;
+        if (pstEntry->ulMin > ulShowMin) break;
     }
     
     if (i==ulEntryCnt) {

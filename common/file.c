@@ -31,7 +31,6 @@ VOID FILE_GetFileName(IN ULONG ulStockCode, IN const CHAR* szFileDir, IN ULONG u
             assert(0);
             return;
     }
-    DebugOutString("file=%s\n", szFileName);
 
     return;
 }
@@ -85,7 +84,7 @@ ULONG FILE_GetFileHead(IN ULONG ulFlag)
 
     switch (ulFlag) {
         case FILE_TYPE_THS_MIN5:
-            ulFileHead  = FILE_THS_DAY_HEAD_SIZE;
+            ulFileHead  = FILE_THS_MIN5_HEAD_SIZE;
             break;
         case FILE_TYPE_THS_DAY:
             ulFileHead  = FILE_THS_DAY_HEAD_SIZE;
@@ -103,7 +102,7 @@ ULONG FILE_GetFileHead(IN ULONG ulFlag)
 }
 
 //user need free *ppFileData if return value is not zero
-ULONG FILE_GetFileData(IN ULONG ulStockCode, IN CHAR *szDir, IN ULONG ulFileType, OUT VOID **ppFileData)
+ULONG FILE_GetFileData(IN ULONG ulStockCode, IN const CHAR *szDir, IN ULONG ulFileType, OUT VOID **ppFileData)
 {
     ULONG ulFileHead;
     ULONG ulEntrySize;
@@ -129,6 +128,7 @@ ULONG FILE_GetFileData(IN ULONG ulStockCode, IN CHAR *szDir, IN ULONG ulFileType
     assert(0 == (ulFileSize%ulEntrySize));
     ulEntryCnt = ulFileSize/ulEntrySize;
     assert(0!=ulEntryCnt);
+    DebugOutString("file %s entry=%u\n", szFileName, ulEntryCnt);
 
     *ppFileData = malloc(ulFileSize);
     assert(NULL != *ppFileData);
@@ -140,6 +140,34 @@ ULONG FILE_GetFileData(IN ULONG ulStockCode, IN CHAR *szDir, IN ULONG ulFileType
     fclose(fp);
 
     return ulEntryCnt;
+}
+
+VOID FILE_SetFileData
+(
+    IN ULONG ulStockCode, 
+    IN const CHAR *szDir, 
+    IN ULONG ulFileType,
+    IN ULONG ulSetLen,
+    IN VOID  *pFileData
+)
+{
+    CHAR  szFileName[FILE_NAME_LEN];
+    FILE *fp = NULL;
+
+    assert(NULL != pFileData);
+    assert(FILE_TYPE_CUSTOM == ulFileType);     //Only support custom files now
+
+    FILE_GetFileName(ulStockCode, szDir, ulFileType, szFileName);
+    fopen_s(&fp, szFileName, "wb");
+    if (NULL == fp) {
+        printf("invalid file %s\n", szFileName);
+        return;
+    }
+
+    fwrite(pFileData, ulSetLen, 1, fp);
+    fclose(fp);
+    
+    return;
 }
 
 ULONG FILE_GetVol(IN ULONG ulFileVol)
@@ -198,7 +226,7 @@ ULONG FILE_Date2ThsMin(IN ULONG ulDate)
 //whole data's date must be vaild
 ULONG FILE_ThsMin5ToMin30(IN FILE_THS_MIN5_ENTRY_S *pstMin5, OUT FILE_WHOLE_DATA_S *pstWhole)
 {
-    ULONG i,j,k;
+    ULONG i,k;
     ULONG ulMaxPrice, ulMinPrice, ulMin30Vol;
     ULONG ulPrevMin;
     ULONG ulMin5Date;
@@ -210,6 +238,10 @@ ULONG FILE_ThsMin5ToMin30(IN FILE_THS_MIN5_ENTRY_S *pstMin5, OUT FILE_WHOLE_DATA
     ulMin5Date = FILE_ThsMin2Date(pstMin5->ulMin);
     assert(ulMin5Date == pstWhole->ulDate);
     pstMin30Price=pstWhole->astMin30Price;
+    ulPrevMin = pstMin5->ulMin;
+    ulMaxPrice = 0;
+    ulMinPrice = 0xFFFFFFFF;
+    ulMin30Vol = 0;
 
     // one day = 4 hours = 48 min5
     for (i=0,k=0;i<48;i++,pstMin5++) {
@@ -305,6 +337,19 @@ ULONG FILE_QlWeightToCustom(IN FILE_QL_WEIGHT_ENTRY_S *pstWeight, OUT FILE_WHOLE
     pstFactor->ulFlag = FILE_VAILD_FACTOR;
 
     return 1;
+}
+
+ULONG FILE_QlDate2Custom(IN ULONG ulWeightDate)
+{
+#define FILE_QL_GET_YEAR(ulDate)    (((ulDate) & 0xFFF00000) >> 20)
+#define FILE_QL_GET_MONTH(ulDate)   (((ulDate) & 0x000F0000) >> 16)
+#define FILE_QL_GET_DAY(ulDate)     (((ulDate) & 0x0000F800) >> 11)
+
+    ULONG ulYear  = FILE_QL_GET_YEAR(ulWeightDate);
+    ULONG ulMonth = FILE_QL_GET_MONTH(ulWeightDate);
+    ULONG ulDay   = FILE_QL_GET_DAY(ulWeightDate);
+
+    return ((ulYear * 10000) + (ulMonth * 100) + ulDay);
 }
 
 
