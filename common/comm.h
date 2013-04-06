@@ -91,5 +91,7 @@ ULONG GetCurrentDate(VOID);
 
 ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry);
 
+extern unsigned long g_aulStockCode[];
+extern unsigned long g_ulTotalCount;
 #endif
 
