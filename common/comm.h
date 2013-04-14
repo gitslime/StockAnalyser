@@ -73,7 +73,7 @@ typedef struct tagWholeData
 #define FILE_VAILD_FACTOR   0x88888888
 #define FILE_VAILD_PRICE    0xCCCCCCCC
 
-
+#define FILE_PRICE2REAL(ulFilePrice)     ((FLOAT)((ulFilePrice)/(1000)))
 
 #define DATE_BREAKDOWN(ulDate, ulYear, ulMon, ulDay)    \
 {                                       \
@@ -93,5 +93,18 @@ ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S 
 
 extern unsigned long g_aulStockCode[];
 extern unsigned long g_ulTotalCount;
+
+#define METHOD_RISE      (0x0001)
+ULONG GetMethod(IN CHAR* szMethod);
+ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList);
+
+#define RISE_TYPE_BEGIN             (0x01UL)
+#define RISE_TYPE_HIGH              (0x02UL)
+#define RISE_TYPE_LOW               (0x03UL)
+#define RISE_TYPE_END               (0x04UL)
+
+BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG ulType, OUT FLOAT *pfTotalRise);
+
+
 #endif
 

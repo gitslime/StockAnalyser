@@ -64,4 +64,102 @@ ULONG GetCurrentDate(VOID)
     return DATE_ASSEMBLE(LocalTime.tm_year, LocalTime.tm_mon, LocalTime.tm_mday);
 }
 
+ULONG GetMethod(IN CHAR* szMethod)
+{
+    ULONG ulMethod;
+    
+    if (0 == _stricmp(szMethod, "rise")) {
+        ulMethod = METHOD_RISE;
+    }
+    else {
+        printf("invaild method type\n");
+        ulMethod = INVAILD_ULONG;
+        exit(2);
+    }
+    return ulMethod;
+}
+
+
+ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList) 
+{
+    ULONG i;
+    ULONG ulCode;
+    ULONG ulCodeCnt;
+    
+    if (0 == _stricmp(szCode, "all")) {
+        ulCodeCnt = g_ulTotalCount;
+        *ppulList = g_aulStockCode;
+    }
+    else {
+        ulCode = (ULONG)atol(szCode);
+        for (i=0;i<g_ulTotalCount;i++) {
+            if (ulCode == g_aulStockCode[i]) break;
+        }
+
+        if (g_ulTotalCount == i) {
+            ulCodeCnt = 0;      // not found
+        }
+        else {
+            ulCodeCnt = 1;
+            *ppulList = &g_aulStockCode[i];
+        }
+    }
+    
+    return ulCodeCnt;
+}
+
+// get total rise of n days before current
+BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG ulType, OUT FLOAT *pfTotalRise)
+{
+    ULONG i;
+    BOOL_T bIsContinuous = BOOL_TRUE;
+    ULONG ulBaseEndPrice;
+    ULONG ulHigh, ulLow;
+    FLOAT fPrevPrice, fCurrPrice;
+    FLOAT fMulti, fAdder;
+    FILE_WHOLE_DATA_S *pstBase = pstCurrent - ulCnt - 1;
+    FILE_WHOLE_DATA_S *pstTemp = pstCurrent - ulCnt;
+
+    assert(FILE_VAILD_PRICE == pstBase->stDailyPrice.ulFlag);
+    ulBaseEndPrice = pstBase->stDailyPrice.ulEnd;
+
+    fPrevPrice = (FLOAT)ulBaseEndPrice;
+    fMulti = 1;
+    fAdder = 0;
+    ulHigh = pstTemp->stDailyPrice.ulHigh;
+    ulLow  = pstTemp->stDailyPrice.ulLow;
+    for (i=0;i<ulCnt;i++) {
+        if (FILE_VAILD_FACTOR == pstTemp->stFactor.ulFlag) {
+            fMulti *= pstTemp->stFactor.fMulti;
+            fAdder += pstTemp->stFactor.fAdder;
+        }
+        
+        if (RISE_TYPE_END == ulType) {
+            fCurrPrice = fMulti * pstTemp->stDailyPrice.ulEnd + fAdder;
+        }
+        else if (RISE_TYPE_HIGH == ulType) {
+            ulHigh = MAX(pstTemp->stDailyPrice.ulHigh, ulHigh);
+            fCurrPrice = fMulti * ulHigh + fAdder;
+        }
+        else if (RISE_TYPE_LOW == ulType) {
+            ulLow = MIN(pstTemp->stDailyPrice.ulHigh, ulLow);
+            fCurrPrice = fMulti * ulLow + fAdder;
+        }
+        else if (RISE_TYPE_BEGIN == ulType) {
+            fCurrPrice = fMulti * pstTemp->stDailyPrice.ulBegin + fAdder;
+        }
+        else {
+            assert(0);
+        }
+        if (fCurrPrice < fPrevPrice) bIsContinuous = BOOL_FALSE;
+
+        pstTemp++;
+        fPrevPrice = fCurrPrice;
+    }
+
+    *pfTotalRise = fCurrPrice / ulBaseEndPrice - 1;
+
+    return bIsContinuous;
+}
+
 
