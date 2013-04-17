@@ -19,16 +19,20 @@ BOOL_T CHOOSE_Rise(IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pst
 {
     BOOL_T bIsContinuous;
     FLOAT  fPrevRise;
+    ULONG  ulThreshPrice;
     FILE_WHOLE_DATA_S *pstBase = pstCurrData - CHOOSE_RISE_DAYS;
     
-    bIsContinuous = GetTotalRise(CHOOSE_RISE_DAYS, (pstCurrData+1), RISE_TYPE_END, &fPrevRise);
+    bIsContinuous = GetTotalRise(CHOOSE_RISE_DAYS, pstCurrData, RISE_TYPE_END, &fPrevRise);
     if (BOOL_FALSE == bIsContinuous) return BOOL_FALSE;
 
     pstDealInfo->bIsSell    = BOOL_FALSE;
     pstDealInfo->usDealHour = CHOOSE_RISE_BUY_HOUR;
     pstDealInfo->usDealMin  = CHOOSE_RISE_BUY_MIN;
     pstDealInfo->bIsHigher  = BOOL_TRUE;
-    pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(CHOOSE_RISE_THRESHOLD_RATE * pstBase->stDailyPrice.ulEnd);
+
+    // make sure rising continuously
+    ulThreshPrice = MAX(CHOOSE_RISE_THRESHOLD_RATE * pstBase->stDailyPrice.ulEnd, pstCurrData->stDailyPrice.ulEnd);
+    pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(ulThreshPrice);
 
     return BOOL_TRUE;
 }

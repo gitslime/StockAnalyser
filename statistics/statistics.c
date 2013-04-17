@@ -1,8 +1,8 @@
 #include "../common/comm.h"
 #include "../common/file.h"
 
-#define RISE_CONTINUOUS_DAYS        (3)
-#define RISE_WATCH_DAYS             (2)
+#define RISE_CONTINUOUS_DAYS        (2)
+#define RISE_WATCH_DAYS             (1)
 
 VOID STATIC_Rise(IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeData)
 {
@@ -10,11 +10,12 @@ VOID STATIC_Rise(IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeData)
     BOOL_T bIsCont;
     FLOAT fPrevRise, fWatchRise, fWatchDrop;
     FILE_WHOLE_DATA_S *pstCurr = pstWholeData+RISE_CONTINUOUS_DAYS+1;
-    FILE_WHOLE_DATA_S *pstWatch = pstCurr+RISE_WATCH_DAYS;
+    FILE_WHOLE_DATA_S *pstPrev = pstCurr-1;
+    FILE_WHOLE_DATA_S *pstWatch = pstCurr+RISE_WATCH_DAYS-1;
 
     ulEntryCnt -= RISE_WATCH_DAYS;
-    for (i=RISE_CONTINUOUS_DAYS+1;i<ulEntryCnt;i++, pstCurr++, pstWatch++) {
-        bIsCont = GetTotalRise(RISE_CONTINUOUS_DAYS, pstCurr, RISE_TYPE_END, &fPrevRise);
+    for (i=RISE_CONTINUOUS_DAYS+1;i<ulEntryCnt;i++, pstCurr++, pstPrev++, pstWatch++) {
+        bIsCont = GetTotalRise(RISE_CONTINUOUS_DAYS, pstPrev, RISE_TYPE_END, &fPrevRise);
         if (BOOL_FALSE == bIsCont) continue;
 
         GetTotalRise(RISE_WATCH_DAYS, pstWatch, RISE_TYPE_HIGH, &fWatchRise);
@@ -50,7 +51,6 @@ VOID STATIC_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod)
 int main(int argc,char *argv[]) 
 {
     ULONG i, ulCodeCnt;
-    ULONG ulStockCode;
     ULONG ulMethod;
     ULONG *pulCodeList = NULL;
     

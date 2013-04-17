@@ -108,7 +108,7 @@ ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList)
     return ulCodeCnt;
 }
 
-// get total rise of n days before current
+// get total rise of n days, including current
 BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG ulType, OUT FLOAT *pfTotalRise)
 {
     ULONG i;
@@ -117,8 +117,8 @@ BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG u
     ULONG ulHigh, ulLow;
     FLOAT fPrevPrice, fCurrPrice;
     FLOAT fMulti, fAdder;
-    FILE_WHOLE_DATA_S *pstBase = pstCurrent - ulCnt - 1;
-    FILE_WHOLE_DATA_S *pstTemp = pstCurrent - ulCnt;
+    FILE_WHOLE_DATA_S *pstBase = pstCurrent - ulCnt;
+    FILE_WHOLE_DATA_S *pstTemp = pstBase+1;
 
     assert(FILE_VAILD_PRICE == pstBase->stDailyPrice.ulFlag);
     ulBaseEndPrice = pstBase->stDailyPrice.ulEnd;
