@@ -175,7 +175,7 @@ VOID FILE_UpdateWeight(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *
     pstOgData    = astOgData;
     for (i=0,ulUpdateCnt=0;i<ulSrcEntryCnt;i++,pstWgtData++) {
         ulDate = FILE_QlDate2Custom(pstWgtData->ulQlDate);
-        ulOffset = GetIndexByDate(ulDate,ulOgEntryCnt,astOgData);
+        ulOffset = GetIndexByDate(ulDate,INDEX_EXACT,ulOgEntryCnt,astOgData);
         if (INVAILD_ULONG == ulOffset) continue;
 
         pstOgData = astOgData + ulOffset;

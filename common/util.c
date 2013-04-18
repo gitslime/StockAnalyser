@@ -24,7 +24,7 @@ VOID DebugOutString(IN const CHAR *szFmt, ...)
 }
 
 //not use recursion because of overhead of function call
-ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry)
+ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulFlag, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry)
 {
     int iBegin, iEnd, iMid;         //flag maybe nagative
     FILE_WHOLE_DATA_S *pstMidEntry = pstWholeEntry;    
@@ -45,12 +45,26 @@ ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S 
         }
 
         if (iBegin>iEnd) {
-            DebugOutString("%d not in the list\n",ulDate);
-            return INVAILD_ULONG;
+            switch (ulFlag) {
+                case INDEX_EXACT:
+                    DebugOutString("%d not in the list\n",ulDate);
+                    iMid = INVAILD_ULONG;
+                    break;
+                case INDEX_PREV:
+                    iMid = iEnd;
+                    break;
+                case INDEX_NEXT:
+                    iMid = iBegin;
+                    break;
+                default:
+                    assert(0);
+                    return INVAILD_ULONG;
+            }
+            break;
         }
     }
 
-    return (ULONG)iMid;
+    return ((ULONG)iMid >= ulEntryCnt) ? INVAILD_ULONG : (ULONG)iMid;
 }
 
 ULONG GetCurrentDate(VOID)
@@ -151,7 +165,7 @@ BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG u
         else {
             assert(0);
         }
-        if (fCurrPrice < fPrevPrice) bIsContinuous = BOOL_FALSE;
+        if (fCurrPrice <= 1.02*fPrevPrice) bIsContinuous = BOOL_FALSE;
 
         pstTemp++;
         fPrevPrice = fCurrPrice;

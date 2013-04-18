@@ -133,7 +133,7 @@ VOID ShowCustom(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstE
     ULONG ulIndex;
     FILE_WHOLE_DATA_S *pstCurrent;
     
-    ulIndex = GetIndexByDate(ulDate, ulEntryCnt, pstEntry);
+    ulIndex = GetIndexByDate(ulDate, INDEX_EXACT, ulEntryCnt, pstEntry);
     if (INVAILD_ULONG == ulIndex) {
         printf("date %d not found\n", ulDate);
         return;
@@ -185,18 +185,18 @@ int main(int argc,char *argv[])
     
     //check parameter
     if ((argc < 5) || (argc > 6)) {
-        printf("USAGE: %s code date path type [debug]", argv[0]);
+        printf("USAGE: %s path type code date [debug]", argv[0]);
         exit(1);
     }
     if (0 == _stricmp(argv[argc-1], "debug"))
         g_bIsDebugMode = BOOL_TRUE;
     
-    ulStockCode = (ULONG)atol(argv[1]);
-    ulShowDate  = (ULONG)atol(argv[2]);
-    ulFileType  = GetFileType(argv[4]);
+    ulStockCode = (ULONG)atol(argv[3]);
+    ulShowDate  = (ULONG)atol(argv[4]);
+    ulFileType  = GetFileType(argv[2]);
     DebugOutString("code=%06u, date=%u, type=0x%08x\n", ulStockCode, ulShowDate, ulFileType);
 
-    ShowFileContent(ulStockCode, ulShowDate, argv[3], ulFileType);
+    ShowFileContent(ulStockCode, ulShowDate, argv[1], ulFileType);
 
     return 0;
 }

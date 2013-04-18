@@ -73,7 +73,7 @@ typedef struct tagWholeData
 #define FILE_VAILD_FACTOR   0x88888888
 #define FILE_VAILD_PRICE    0xCCCCCCCC
 
-#define FILE_PRICE2REAL(ulFilePrice)     ((FLOAT)((ulFilePrice)/(1000)))
+#define FILE_PRICE2REAL(FilePrice)     ((FLOAT)((FilePrice)/(1000)))
 
 #define DATE_BREAKDOWN(ulDate, ulYear, ulMon, ulDay)    \
 {                                       \
@@ -89,7 +89,10 @@ typedef struct tagWholeData
 
 ULONG GetCurrentDate(VOID);
 
-ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry);
+#define INDEX_EXACT     (0x00)      //the same date exactly
+#define INDEX_PREV      (0x10)      //if not found, return the nearest date before ulDate
+#define INDEX_NEXT      (0x11)      //if not found, return the nearest date after ulDate
+ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulFlag, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry);
 
 extern unsigned long g_aulStockCode[];
 extern unsigned long g_ulTotalCount;
