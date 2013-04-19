@@ -1,17 +1,6 @@
 #include "../common/comm.h"
 #include "../common/file.h"
 
-VOID FILE_EntryCheck(IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry)
-{
-    ULONG i;
-    FILE_WHOLE_DATA_S *pstNextEntry = pstWholeEntry+1;
-
-    for (i=1; i< ulEntryCnt; i++,pstWholeEntry++,pstNextEntry++) {
-        assert(pstNextEntry->ulDate > pstWholeEntry->ulDate);
-    }
-    return;
-}
-
 VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *szTrgDir)
 {
     ULONG i,j;
@@ -84,11 +73,8 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
         pstWholeData += ulRemainingCnt;
     }
 
-    // check whole data
-    ulTrgEntryCnt = pstWholeData - astWholeData;
-    FILE_EntryCheck(ulTrgEntryCnt, astWholeData);
-
     // write file
+    ulTrgEntryCnt = pstWholeData - astWholeData;
     FILE_SetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, sizeof(FILE_WHOLE_DATA_S)*ulTrgEntryCnt,astWholeData);
     
     free(astDailyData);
