@@ -12,6 +12,7 @@ typedef struct tagPreDealInfo
 
 #define CHOOSE_RISE_DAYS    (2)
 #define CHOOSE_RISE_THRESHOLD_RATE      (1.1F)
+#define CHOOSE_RISE_THRESHOLD_DAILY     (1.02F)
 #define CHOOSE_RISE_BUY_HOUR    (14)
 #define CHOOSE_RISE_BUY_MIN     (50)
 
@@ -31,12 +32,9 @@ BOOL_T CHOOSE_Rise(IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pst
     pstDealInfo->bIsHigher  = BOOL_TRUE;
 
     // make sure rising continuously
-    if ((ULONG)(CHOOSE_RISE_THRESHOLD_RATE * pstBase->stDailyPrice.ulEnd) < pstCurrData->stDailyPrice.ulEnd) {
-        fThreshPrice = (FLOAT)pstCurrData->stDailyPrice.ulEnd + 10;
-    }
-    else {
-        fThreshPrice = (CHOOSE_RISE_THRESHOLD_RATE * pstBase->stDailyPrice.ulEnd);
-    }
+    fThreshPrice = MAX((CHOOSE_RISE_THRESHOLD_RATE  * pstBase->stDailyPrice.ulEnd),
+                       (CHOOSE_RISE_THRESHOLD_DAILY * pstCurrData->stDailyPrice.ulEnd));
+    
     pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(fThreshPrice);
 
     return BOOL_TRUE;

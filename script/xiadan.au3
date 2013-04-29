@@ -134,7 +134,7 @@ EndFunc
 
 ; returns an array, array[0]=total count of trades, array[i]=one line of trade info
 Func XiadanGetTradeInfobyFile ()
-   Local $FILE_Choose = "C:\Users\slime\0418.txt"
+   Local $FILE_Choose = "C:\Users\slime\0422.txt"
    Local $fp = FileOpen($FILE_Choose, 0)
    
    ; Check if file opened for reading OK
@@ -177,13 +177,12 @@ Func XiadanDailyTrade()
 	  	  
 	  if Mod($i, $SkipStep) Then ContinueLoop
 		 
-	  XiadanSetPreDeal($param[1],$param[2],$param[3],$param[4],$param[5],$param[6])	  
+	  XiadanSetPreDeal($param[1],$param[2],$param[3],$param[4],$param[5],$param[6])
    WEnd
 
 EndFunc
 
 FileDelete("D:\green\xiadan\hexin\data.jx")
-;XiadanDailyTrade()
 XiadanLogin()
 XiadanInitAccount()
 XiadanInitPreDeal()

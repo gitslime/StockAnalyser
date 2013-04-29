@@ -76,13 +76,13 @@ VOID CHECK_CheckOne(IN ULONG ulCode, IN ULONG ulStartDate, IN CHAR *szDir)
         // each price has different range
         pstDailyPrice = &(pstCurrData->stDailyPrice);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulBegin, pstDailyPrice->ulBegin, 3))
-            printf("%u begin price not march!\n", pstCurrData->ulDate);
+            printf("%u begin price not march! %u VS %u\n", pstCurrData->ulDate, ulBegin, pstDailyPrice->ulBegin);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulHigh, pstDailyPrice->ulHigh, 6))
-            printf("%u high price not march!\n", pstCurrData->ulDate);
+            printf("%u high price not march! %u VS %u\n", pstCurrData->ulDate, ulHigh, pstDailyPrice->ulHigh);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulLow, pstDailyPrice->ulLow, 6))
-            printf("%u low price not march!\n", pstCurrData->ulDate);
+            printf("%u low price not march! %u VS %u\n", pstCurrData->ulDate, ulLow, pstDailyPrice->ulLow);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulEnd, pstDailyPrice->ulEnd, 4))
-            printf("%u end price not march!\n", pstCurrData->ulDate);
+            printf("%u end price not march! %u VS %u\n", pstCurrData->ulDate, ulEnd, pstDailyPrice->ulEnd);
         if ((pstDailyPrice->ulVol < ulVol-25) || (pstDailyPrice->ulVol > ulVol+10))
             printf("%u volume not march! %u VS %u\n", pstCurrData->ulDate, pstDailyPrice->ulVol, ulVol);
     }

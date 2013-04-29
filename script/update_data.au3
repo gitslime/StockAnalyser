@@ -7,7 +7,7 @@ Global $TrgDir  = " F:\StockAnalyser\database"
 
 Local $StockList = GetStockList()
 Local $i = 1
-
+;MsgBox(0, "debug", "Total CNt="&$StockList[0])
 While $i <= $StockList[0]
    Local $StockCode = $StockList[$i]
    

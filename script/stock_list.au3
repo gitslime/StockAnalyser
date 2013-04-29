@@ -33,8 +33,9 @@ Func GetStockList()
 EndFunc
 
 Func IsVaildStock($Code)
+   If Not StringIsDigit($Code) Then Return False
 
-if $Code < 010000 Then
+   If $Code < 010000 Then
 	  Return True
    ElseIf 300000 <= $Code And $Code < 310000 Then
 	  Return True
@@ -44,4 +45,3 @@ if $Code < 010000 Then
    
    Return False
 EndFunc
-

@@ -1,6 +1,9 @@
 #include "../common/comm.h"
 #include "../common/file.h"
 
+#define IS_VAILD_PRICE(ulPriceWithCheck) \
+    ((((ulPriceWithCheck) & 0xF0000000) == FILE_THS_PRICE_CHK) ? BOOL_TRUE : BOOL_FALSE)
+
 VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *szTrgDir)
 {
     ULONG i,j;
@@ -39,7 +42,8 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
 
     // set daily price to target data
     for (i=0,j=0;i<ulSrcEntryCnt;i++,pstDailyData++) {
-        if ((0 == pstDailyData->ulDate) || 
+        assert((BOOL_TRUE == IS_VAILD_PRICE(pstDailyData->ulBeginWithCheck)));
+        if ((0 == pstDailyData->ulDate) || (BOOL_FALSE == IS_VAILD_PRICE(pstDailyData->ulBeginWithCheck)) ||
             (0x80000000 == pstDailyData->ulVolWithCheck)) continue;  //invaild data
 
         // if target data is before source data, copy this part first
