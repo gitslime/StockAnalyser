@@ -1,40 +1,6 @@
-#include "../common/comm.h"
-#include "../common/file.h"
-
-#define RISE_CONTINUOUS_DAYS        (3)
-#define RISE_WATCH_DAYS             (1)
-
-VOID STAT_Rise(IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstBeginData, IN FILE_WHOLE_DATA_S *pstFirstData)
-{
-    ULONG i;
-    BOOL_T bIsCont;
-    FLOAT fPrevRise, fWatchRise, fWatchDrop;
-    FILE_WHOLE_DATA_S *pstPrev = pstBeginData-1;
-    FILE_WHOLE_DATA_S *pstBase = pstPrev-RISE_CONTINUOUS_DAYS;
-    FILE_WHOLE_DATA_S *pstWatch = pstBeginData;
-
-    // make sure array is not out of bound
-    if ((pstBeginData-pstFirstData) < RISE_CONTINUOUS_DAYS) {
-        pstBase = pstFirstData;
-        pstPrev = pstBase+RISE_CONTINUOUS_DAYS;
-        pstWatch = pstPrev+1;
-        ulEntryCnt -= pstWatch-pstBeginData;
-    }
-
-    for (i=0;i<ulEntryCnt;i++, pstBase++, pstPrev++, pstWatch++) {
-        //if (INVAILD_ULONG != pstBase->ulRsv) continue;
-        
-        bIsCont = GetTotalRise(RISE_CONTINUOUS_DAYS, pstPrev, RISE_TYPE_END, &fPrevRise);
-        if (BOOL_FALSE == bIsCont) continue;
-
-        GetTotalRise(RISE_WATCH_DAYS, pstWatch, RISE_TYPE_HIGH, &fWatchRise);
-        GetTotalRise(RISE_WATCH_DAYS, pstWatch, RISE_TYPE_LOW, &fWatchDrop);
-
-        printf("%d,%f,%f,%f\n", pstWatch->ulDate, fPrevRise, fWatchRise, fWatchDrop);
-    }
-
-    return;
-}
+#include "common/comm.h"
+#include "common/file.h"
+#include "method/method.h"
 
 VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULONG ulBeginDate, IN ULONG ulEndDate)
 {
@@ -59,7 +25,7 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
 
     switch (ulMethod) {
         case METHOD_RISE:
-            STAT_Rise(ulStatCnt, pstStatData, astWholeData);
+            RISE_Statistics(ulStatCnt, pstStatData, astWholeData);
             break;
         default:
             printf("method not support\n");

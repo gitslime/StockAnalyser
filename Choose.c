@@ -1,44 +1,6 @@
-#include "../common/comm.h"
-#include "../common/file.h"
-
-typedef struct tagPreDealInfo
-{
-    BOOL_T bIsSell;     //true:sell; false:buy
-    USHORT usDealHour;
-    USHORT usDealMin;
-    BOOL_T bIsHigher;   //true:higher; false:lower
-    FLOAT  fThresholdPrice;
-}CHOOSE_PRE_DEAL_S;
-
-#define CHOOSE_RISE_DAYS    (2)
-#define CHOOSE_RISE_THRESHOLD_RATE      (1.1F)
-#define CHOOSE_RISE_THRESHOLD_DAILY     (1.02F)
-#define CHOOSE_RISE_BUY_HOUR    (14)
-#define CHOOSE_RISE_BUY_MIN     (50)
-
-BOOL_T CHOOSE_Rise(IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo)
-{
-    BOOL_T bIsContinuous;
-    FLOAT  fPrevRise;
-    FLOAT  fThreshPrice;
-    FILE_WHOLE_DATA_S *pstBase = pstCurrData - CHOOSE_RISE_DAYS;
-    
-    bIsContinuous = GetTotalRise(CHOOSE_RISE_DAYS, pstCurrData, RISE_TYPE_END, &fPrevRise);
-    if (BOOL_FALSE == bIsContinuous) return BOOL_FALSE;
-
-    pstDealInfo->bIsSell    = BOOL_FALSE;
-    pstDealInfo->usDealHour = CHOOSE_RISE_BUY_HOUR;
-    pstDealInfo->usDealMin  = CHOOSE_RISE_BUY_MIN;
-    pstDealInfo->bIsHigher  = BOOL_TRUE;
-
-    // make sure rising continuously
-    fThreshPrice = MAX((CHOOSE_RISE_THRESHOLD_RATE  * pstBase->stDailyPrice.ulEnd),
-                       (CHOOSE_RISE_THRESHOLD_DAILY * pstCurrData->stDailyPrice.ulEnd));
-    
-    pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(fThreshPrice);
-
-    return BOOL_TRUE;
-}
+#include "common/comm.h"
+#include "common/file.h"
+#include "method/method.h"
 
 VOID CHOOSE_Distribute(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ulMethod)
 {
@@ -60,7 +22,7 @@ VOID CHOOSE_Distribute(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULO
 
     switch (ulMethod) {
         case METHOD_RISE:
-            bIsDeal = CHOOSE_Rise(&astWholeData[ulIndex], &stDealInfo);
+            bIsDeal = RISE_Choose(&astWholeData[ulIndex], &stDealInfo);
             break;
         default:
             printf("method not support\n");

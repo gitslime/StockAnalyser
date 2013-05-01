@@ -1,5 +1,5 @@
-#include "../common/comm.h"
-#include "../common/file.h"
+#include "common/comm.h"
+#include "common/file.h"
 
 ULONG GetFileType(IN CHAR* szType)
 {

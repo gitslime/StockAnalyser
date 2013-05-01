@@ -1,5 +1,5 @@
-#include "../common/comm.h"
-#include "../common/file.h"
+#include "common/comm.h"
+#include "common/file.h"
 
 #define IS_VAILD_PRICE(ulPriceWithCheck) \
     ((((ulPriceWithCheck) & 0xF0000000) == FILE_THS_PRICE_CHK) ? BOOL_TRUE : BOOL_FALSE)

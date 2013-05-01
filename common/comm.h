@@ -63,6 +63,16 @@ typedef struct tagWholeData
     ULONG  ulPad;
 }FILE_WHOLE_DATA_S;
 
+typedef struct tagPreDealInfo
+{
+    BOOL_T bIsSell;     //true:sell; false:buy
+    USHORT usDealHour;
+    USHORT usDealMin;
+    BOOL_T bIsHigher;   //true:higher; false:lower
+    FLOAT  fThresholdPrice;
+}CHOOSE_PRE_DEAL_S;
+
+
 #define FILE_TYPE_THS           0x10000000
 #define FILE_TYPE_THS_MIN5      0x10000005
 #define FILE_TYPE_THS_DAY       0x10000024

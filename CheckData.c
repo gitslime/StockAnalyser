@@ -1,5 +1,5 @@
-#include "../common/comm.h"
-#include "../common/file.h"
+#include "common/comm.h"
+#include "common/file.h"
 
 /* range is defined by bit shift
    for example, range=2 means -1/2~+1/2 range=4 means -1/16~+1/16 */
