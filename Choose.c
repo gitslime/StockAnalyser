@@ -22,7 +22,7 @@ VOID CHOOSE_Distribute(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULO
 
     switch (ulMethod) {
         case METHOD_RISE:
-            bIsDeal = RISE_Choose(&astWholeData[ulIndex], &stDealInfo);
+            bIsDeal = RISE_Choose(ulIndex, &astWholeData[ulIndex], &stDealInfo);
             break;
         default:
             printf("method not support\n");

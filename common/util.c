@@ -202,7 +202,7 @@ FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax)
 BOOL_T IsVaildDate(IN ULONG ulDate)
 {
     ULONG ulYear, ulMon, ulDay;
-    ULONG ulDateEachMon[12]={31,29,31,30,31,30,31,31,30,31,30,31};
+    ULONG ulDateEachMon[13]={0,31,29,31,30,31,30,31,31,30,31,30,31};
     
     DATE_BREAKDOWN(ulDate,ulYear,ulMon,ulDay);
 

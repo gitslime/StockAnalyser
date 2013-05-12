@@ -132,7 +132,7 @@ BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
         }
     }
 
-    if (INVAILD_ULONG != pstStockCtrl->ulSellPrice) {
+    if (INVAILD_ULONG != ulSellPrice) {
         pstStockCtrl->ulSellDate  = pstCurrData->ulDate;
         pstStockCtrl->ulSellPrice = ulSellPrice;
         pstStockCtrl->bIsHold     = BOOL_FALSE;
@@ -188,7 +188,7 @@ int main(int argc,char *argv[])
 {
     ULONG i, ulCodeCnt;
     ULONG ulIndex;
-    BOOL_T bIsSell, bIsBuy, bIsWish;
+    BOOL_T bIsSell, bIsBuy;
     SIM_DEAL_INFO_S stDealInfo;
     ULONG ulBeginDate, ulEndDate, ulCurrDate;
     ULONG *pulCodeList = NULL;
@@ -273,8 +273,8 @@ int main(int argc,char *argv[])
             }
 
             // get wishlist
-            bIsWish = g_pfDailyChoose(apstCurrData[i]-apstWholeData[i], apstCurrData[i], &stWish);
-            if (BOOL_FALSE != bIsWish) {
+            if ((BOOL_FALSE == pstStockCtrl->bIsHold) &&
+                (BOOL_FALSE != g_pfDailyChoose(apstCurrData[i]-apstWholeData[i], apstCurrData[i], &stWish))) {
                 pstStockCtrl->bIsWish     = BOOL_TRUE;
                 pstStockCtrl->ulWishPrice = FILE_REAL2PRICE(stWish.fThresholdPrice);
             }
