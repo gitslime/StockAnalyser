@@ -72,6 +72,19 @@ typedef struct tagPreDealInfo
     FLOAT  fThresholdPrice;
 }CHOOSE_PRE_DEAL_S;
 
+typedef struct tagStockCtrl
+{
+    ULONG  ulCode;
+    BOOL_T bIsHold;
+    BOOL_T bIsWish;
+    ULONG  ulWishPrice;
+    ULONG  ulGainPrice;
+    ULONG  ulLossPrice;
+    ULONG  ulBuyDate;
+    ULONG  ulBuyPrice;
+    ULONG  ulSellDate;
+    ULONG  ulSellPrice;
+}STOCK_CTRL_S;
 
 #define FILE_TYPE_THS           0x10000000
 #define FILE_TYPE_THS_MIN5      0x10000005
@@ -84,6 +97,7 @@ typedef struct tagPreDealInfo
 #define FILE_VAILD_PRICE    0xCCCCCCCC
 
 #define FILE_PRICE2REAL(FilePrice)     ((FLOAT)((FilePrice)/(1000)))
+#define FILE_REAL2PRICE(FilePrice)     ((ULONG)((FilePrice)*(1000)))
 
 #define DATE_BREAKDOWN(ulDate, ulYear, ulMon, ulDay)    \
 {                                       \
@@ -115,9 +129,22 @@ ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList);
 #define RISE_TYPE_HIGH              (0x02UL)
 #define RISE_TYPE_LOW               (0x03UL)
 #define RISE_TYPE_END               (0x04UL)
+#define STOCK_RISE_THREASHOLD       (0.099F)
 
 BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG ulType, OUT FLOAT *pfTotalRise);
 
+VOID RandomInit(VOID);
+ULONG RandomUlong(IN ULONG ulMin, IN ULONG ulMax);
+FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax);
+
+BOOL_T IsVaildDate(IN ULONG ulDate);
+VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData, OUT FLOAT *pfMulti, OUT FLOAT *pfAdder);
+
+typedef ULONG (*GetGainPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
+typedef ULONG (*GetLossPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
+typedef ULONG (*GetBuyPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
+typedef ULONG (*GetSellPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
+typedef BOOL_T (*Choose_PF)(IN ULONG, IN FILE_WHOLE_DATA_S *, OUT CHOOSE_PRE_DEAL_S *);
 
 #endif
 

@@ -54,6 +54,7 @@ int main(int argc,char *argv[])
         printf("USAGE: %s method path date { code | all } [debug]", argv[0]);
         exit(1);
     }
+    RandomInit();
 
     if (0 == _stricmp(argv[argc-1], "debug"))
         g_bIsDebugMode = BOOL_TRUE;

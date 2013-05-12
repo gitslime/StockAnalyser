@@ -177,4 +177,63 @@ BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG u
     return bIsContinuous;
 }
 
+VOID RandomInit(VOID)
+{
+    srand((unsigned int)time(0));
+    return;
+}
+
+// return a random unsigned long in [ulMin, ulMax)
+ULONG RandomUlong(IN ULONG ulMin, IN ULONG ulMax)
+{
+    if (ulMin == ulMax) return ulMin;
+    
+    assert(ulMax > ulMin);
+    return (rand() % (ulMax - ulMin)) + ulMin;
+}
+
+// return a random float in [fMin, fMax]
+FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax)
+{
+    assert(fMax >= fMin);
+    return (FLOAT)(rand()/(double)(RAND_MAX))*(fMax-fMin)+fMin;
+}
+
+BOOL_T IsVaildDate(IN ULONG ulDate)
+{
+    ULONG ulYear, ulMon, ulDay;
+    ULONG ulDateEachMon[12]={31,29,31,30,31,30,31,31,30,31,30,31};
+    
+    DATE_BREAKDOWN(ulDate,ulYear,ulMon,ulDay);
+
+    if ((ulYear < 1990) || (ulYear > 2050)) return BOOL_FALSE;
+    if ((ulMon < 1) || (ulMon > 12)) return BOOL_FALSE;
+    if ((ulDay < 1) || (ulDay > ulDateEachMon[ulMon])) return BOOL_FALSE;
+
+    return BOOL_TRUE;
+}
+
+VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData,
+               OUT FLOAT *pfMulti, OUT FLOAT *pfAdder)
+{
+    FLOAT fMulti, fAdder;
+    FILE_WHOLE_DATA_S *pstTemp = pstCurrData;
+
+    fMulti = 1;
+    fAdder = 0;
+    while (1) {
+        if (pstTemp->ulDate <= ulStartDate) break;
+        
+        if (FILE_VAILD_FACTOR == pstTemp->stFactor.ulFlag) {
+            fMulti *= pstTemp->stFactor.fMulti;
+            fAdder += pstTemp->stFactor.fAdder;
+        }
+		pstTemp--;
+    }
+
+    *pfMulti = fMulti;
+    *pfAdder = fAdder;
+    
+    return;
+}
 
