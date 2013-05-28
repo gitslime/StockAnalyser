@@ -1,5 +1,6 @@
+#include "comm.h"
 
-unsigned long g_aulStockCode[] =
+static unsigned long g_aulStockCode[] =
 {
     1,
     2,
@@ -2473,5 +2474,35 @@ unsigned long g_aulStockCode[] =
     603993,
 };
 
-unsigned long g_ulTotalCount = sizeof(g_aulStockCode)/sizeof(unsigned long);
+static unsigned long g_ulTotalCount = sizeof(g_aulStockCode)/sizeof(unsigned long);
+
+ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList) 
+{
+    ULONG i;
+    ULONG ulCode;
+    ULONG ulCodeCnt;
+    
+    if (0 == _stricmp(szCode, "all")) {
+        ulCodeCnt = g_ulTotalCount;
+        *ppulList = g_aulStockCode;
+    }
+    else {
+        ulCode = (ULONG)atol(szCode);
+        for (i=0;i<g_ulTotalCount;i++) {
+            if (ulCode == g_aulStockCode[i]) break;
+        }
+
+        if (g_ulTotalCount == i) {
+            ulCodeCnt = 0;      // not found
+            DebugOutString("code %06u not found!\n", ulCode);
+        }
+        else {
+            ulCodeCnt = 1;
+            *ppulList = &g_aulStockCode[i];
+        }
+    }
+    
+    return ulCodeCnt;
+}
+
 

@@ -6,6 +6,8 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
 {
     ULONG ulEntryCnt, ulStatCnt;
     ULONG ulBeginIndex, ulEndIndex;
+    METHOD_FUNC_SET_S stMethodFunc;
+    Statistics_PF pfStatistics = NULL;
     FILE_WHOLE_DATA_S *astWholeData = NULL;
     FILE_WHOLE_DATA_S *pstStatData = NULL;
 
@@ -19,17 +21,14 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
         free(astWholeData);
         return;
     }
+
     ulStatCnt   = ulEndIndex - ulBeginIndex + 1;
     pstStatData = &astWholeData[ulBeginIndex];
     assert(ulStatCnt <= ulEntryCnt);
 
-    switch (ulMethod) {
-        case METHOD_RISE:
-            RISE_Statistics(ulStatCnt, pstStatData, astWholeData);
-            break;
-        default:
-            printf("method not support\n");
-    }
+    // get function by method
+    METHOD_GetFuncSet(ulMethod, &stMethodFunc);
+    pfStatistics = stMethodFunc.pfStatistics;
 
     free(astWholeData);
 

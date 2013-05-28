@@ -8,6 +8,8 @@ VOID CHOOSE_Distribute(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULO
     CHOOSE_PRE_DEAL_S stDealInfo;
     ULONG ulEntryCnt;
     ULONG ulIndex;
+    METHOD_FUNC_SET_S stMethodFunc;
+    Choose_PF pfChoose = NULL;
     FILE_WHOLE_DATA_S *astWholeData = NULL;
     
     ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, &astWholeData);
@@ -20,13 +22,10 @@ VOID CHOOSE_Distribute(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULO
         return;
     }
 
-    switch (ulMethod) {
-        case METHOD_RISE:
-            bIsDeal = RISE_Choose(ulIndex, &astWholeData[ulIndex], &stDealInfo);
-            break;
-        default:
-            printf("method not support\n");
-    }
+    // get choose function by method
+    METHOD_GetFuncSet(ulMethod, &stMethodFunc);
+    pfChoose = stMethodFunc.pfDailyChoose;
+    bIsDeal = pfChoose(ulIndex, &astWholeData[ulIndex], &stDealInfo);
 
     free(astWholeData);
 

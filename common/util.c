@@ -78,104 +78,58 @@ ULONG GetCurrentDate(VOID)
     return DATE_ASSEMBLE(LocalTime.tm_year, LocalTime.tm_mon, LocalTime.tm_mday);
 }
 
-ULONG GetMethod(IN CHAR* szMethod)
+ULONG GetDayto1904(IN ULONG ulDate)
 {
-    ULONG ulMethod;
-    
-    if (0 == _stricmp(szMethod, "rise")) {
-        ulMethod = METHOD_RISE;
-    }
-    else {
-        printf("invaild method type\n");
-        ulMethod = INVAILD_ULONG;
-        exit(2);
-    }
-    return ulMethod;
+#define PARAM_DAYS_OF_4YEAR     (365*4+1)
+
+    ULONG ulYear, ulMon, ulDay;
+    ULONG ulYearCnt, ulMonCnt, ulDayCnt, i;
+    CHAR aucDaysofMon[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,   
+                           31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,   
+                           31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31,   
+                           31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
+
+    assert(ulDate > 19040101);
+
+    DATE_BREAKDOWN(ulDate, ulYear, ulMon, ulDay);
+
+    ulDayCnt  = 0;
+    ulYearCnt = ulYear - 1904;
+    ulDayCnt += (ulYearCnt/4)*PARAM_DAYS_OF_4YEAR;
+    ulMonCnt  = (ulYearCnt%4)*12 + ulMon - 1;
+    assert(ulMonCnt < 48);
+    for(i=0; i < ulMonCnt; i++)
+        ulDayCnt += aucDaysofMon[i];
+    ulDayCnt += ulDay - 1;
+
+    return ulDayCnt;
 }
 
 
-ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList) 
+ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate)
 {
-    ULONG i;
-    ULONG ulCode;
-    ULONG ulCodeCnt;
-    
-    if (0 == _stricmp(szCode, "all")) {
-        ulCodeCnt = g_ulTotalCount;
-        *ppulList = g_aulStockCode;
-    }
-    else {
-        ulCode = (ULONG)atol(szCode);
-        for (i=0;i<g_ulTotalCount;i++) {
-            if (ulCode == g_aulStockCode[i]) break;
-        }
+    assert(ulStartDate < ulEndDate);
 
-        if (g_ulTotalCount == i) {
-            ulCodeCnt = 0;      // not found
-            DebugOutString("code %06u not found!\n", ulCode);
-        }
-        else {
-            ulCodeCnt = 1;
-            *ppulList = &g_aulStockCode[i];
-        }
-    }
-    
-    return ulCodeCnt;
+    return GetDayto1904(ulEndDate) - GetDayto1904(ulStartDate);
 }
 
-// get total rise of n days, including current
-BOOL_T GetTotalRise(IN ULONG ulCnt, IN FILE_WHOLE_DATA_S *pstCurrent, IN ULONG ulType, OUT FLOAT *pfTotalRise)
+BOOL_T IsVaildDate(IN ULONG ulDate)
 {
-    ULONG i;
-    BOOL_T bIsContinuous = BOOL_TRUE;
-    ULONG ulBaseEndPrice;
-    ULONG ulHigh, ulLow;
-    FLOAT fPrevPrice, fCurrPrice;
-    FLOAT fMulti, fAdder;
-    FILE_WHOLE_DATA_S *pstBase = pstCurrent - ulCnt;
-    FILE_WHOLE_DATA_S *pstTemp = pstBase+1;
+    ULONG ulYear, ulMon, ulDay;
+    ULONG ulDateEachMon[13]={0,31,29,31,30,31,30,31,31,30,31,30,31};
+    
+    DATE_BREAKDOWN(ulDate,ulYear,ulMon,ulDay);
 
-    assert(FILE_VAILD_PRICE == pstBase->stDailyPrice.ulFlag);
-    ulBaseEndPrice = pstBase->stDailyPrice.ulEnd;
+    if ((ulYear < 1990) || (ulYear > 2050)) return BOOL_FALSE;
+    if ((ulMon < 1) || (ulMon > 12)) return BOOL_FALSE;
+    if ((ulDay < 1) || (ulDay > ulDateEachMon[ulMon])) return BOOL_FALSE;
 
-    fPrevPrice = (FLOAT)ulBaseEndPrice;
-    fMulti = 1;
-    fAdder = 0;
-    ulHigh = pstTemp->stDailyPrice.ulHigh;
-    ulLow  = pstTemp->stDailyPrice.ulLow;
-    for (i=0;i<ulCnt;i++) {
-        if (FILE_VAILD_FACTOR == pstTemp->stFactor.ulFlag) {
-            fMulti *= pstTemp->stFactor.fMulti;
-            fAdder += pstTemp->stFactor.fAdder;
-        }
-        
-        if (RISE_TYPE_END == ulType) {
-            fCurrPrice = fMulti * pstTemp->stDailyPrice.ulEnd + fAdder;
-        }
-        else if (RISE_TYPE_HIGH == ulType) {
-            ulHigh = MAX(pstTemp->stDailyPrice.ulHigh, ulHigh);
-            fCurrPrice = fMulti * ulHigh + fAdder;
-        }
-        else if (RISE_TYPE_LOW == ulType) {
-            ulLow = MIN(pstTemp->stDailyPrice.ulHigh, ulLow);
-            fCurrPrice = fMulti * ulLow + fAdder;
-        }
-        else if (RISE_TYPE_BEGIN == ulType) {
-            fCurrPrice = fMulti * pstTemp->stDailyPrice.ulBegin + fAdder;
-        }
-        else {
-            assert(0);
-        }
-        if (fCurrPrice <= 1.02*fPrevPrice) bIsContinuous = BOOL_FALSE;
-
-        pstTemp++;
-        fPrevPrice = fCurrPrice;
-    }
-
-    *pfTotalRise = fCurrPrice / ulBaseEndPrice - 1;
-
-    return bIsContinuous;
+    return BOOL_TRUE;
 }
+
+
+
+
 
 VOID RandomInit(VOID)
 {
@@ -199,41 +153,8 @@ FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax)
     return (FLOAT)(rand()/(double)(RAND_MAX))*(fMax-fMin)+fMin;
 }
 
-BOOL_T IsVaildDate(IN ULONG ulDate)
-{
-    ULONG ulYear, ulMon, ulDay;
-    ULONG ulDateEachMon[13]={0,31,29,31,30,31,30,31,31,30,31,30,31};
-    
-    DATE_BREAKDOWN(ulDate,ulYear,ulMon,ulDay);
 
-    if ((ulYear < 1990) || (ulYear > 2050)) return BOOL_FALSE;
-    if ((ulMon < 1) || (ulMon > 12)) return BOOL_FALSE;
-    if ((ulDay < 1) || (ulDay > ulDateEachMon[ulMon])) return BOOL_FALSE;
 
-    return BOOL_TRUE;
-}
 
-VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData,
-               OUT FLOAT *pfMulti, OUT FLOAT *pfAdder)
-{
-    FLOAT fMulti, fAdder;
-    FILE_WHOLE_DATA_S *pstTemp = pstCurrData;
 
-    fMulti = 1;
-    fAdder = 0;
-    while (1) {
-        if (pstTemp->ulDate <= ulStartDate) break;
-        
-        if (FILE_VAILD_FACTOR == pstTemp->stFactor.ulFlag) {
-            fMulti *= pstTemp->stFactor.fMulti;
-            fAdder += pstTemp->stFactor.fAdder;
-        }
-		pstTemp--;
-    }
-
-    *pfMulti = fMulti;
-    *pfAdder = fAdder;
-    
-    return;
-}
 

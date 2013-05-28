@@ -5,6 +5,8 @@
 typedef struct tagDealInfo
 {
     FLOAT fTotalProfit;
+    FLOAT fMaxProfit;
+    FLOAT fMinProfit;
     ULONG ulTotalDeal;
     ULONG ulGainP1;     //  0%  <  profit <=    1%
     ULONG ulGainP3;     //  1%  <  profit <=    3%
@@ -27,14 +29,69 @@ Choose_PF       g_pfDailyChoose  = NULL;
 VOID SIM_PrintDealInfo(IN SIM_DEAL_INFO_S *pstDealInfo)
 {
     ULONG ulTotalDeal = pstDealInfo->ulTotalDeal;
+    FLOAT fTotalDeal  = ((FLOAT)ulTotalDeal/100);
     
     if (0 == ulTotalDeal) {
         printf("no deal info\n");
         return;
     }
 
-    printf("\r\nTotal Profit=%f%%, Total Deal=%u, Average Profit=%f%%\n", 
-           pstDealInfo->fTotalProfit*100, ulTotalDeal, pstDealInfo->fTotalProfit/ulTotalDeal*100);
+    printf("\r\nTotalProfit=%.2f%%(%.2f%%~%.2f%%), TotalDeal=%u, AverageProfit=%.4f%%\n", 
+           pstDealInfo->fTotalProfit*100, pstDealInfo->fMinProfit*100, pstDealInfo->fMaxProfit*100,
+           ulTotalDeal, pstDealInfo->fTotalProfit/ulTotalDeal*100);
+    printf("~-10%%]\t\t(-10%%,-5%%]\t(-5%%,-3%%]\t(-3%%,-1%%]\t(-1%%,0%%]\n");
+    printf("%.2f%%\t\t%.2f%%\t\t%.2f%%\t\t%.2f%%\t\t%.2f%%\n",
+           pstDealInfo->ulLossMore/fTotalDeal,  pstDealInfo->ulLossP10/fTotalDeal, 
+           pstDealInfo->ulLossP5/fTotalDeal,    pstDealInfo->ulLossP3/fTotalDeal, 
+           pstDealInfo->ulLossP1/fTotalDeal);
+
+    
+    printf("(0%%,1%%]\t\t(1%%,3%%]\t\t(3%%,5%%]\t\t(5%%,10%%]\t(10%%~\n");
+    printf("%.2f%%\t\t%.2f%%\t\t%.2f%%\t\t%.2f%%\t\t%.2f%%\n",
+           pstDealInfo->ulGainP1/fTotalDeal, 
+           pstDealInfo->ulGainP3/fTotalDeal,    pstDealInfo->ulGainP5/fTotalDeal, 
+           pstDealInfo->ulGainP10/fTotalDeal,   pstDealInfo->ulGainMore/fTotalDeal);
+
+    return;
+}
+
+VOID SIM_SetDealInfo(IN FLOAT fProfit, OUT SIM_DEAL_INFO_S *pstDealInfo)
+{
+   if (fProfit <= -0.10F) {
+        pstDealInfo->ulLossMore++;
+    }
+    else if ((-0.10F < fProfit) && (fProfit <= -0.05F)) {
+        pstDealInfo->ulLossP10++;
+    }
+    else if ((-0.05F < fProfit) && (fProfit <= -0.03F)) {
+        pstDealInfo->ulLossP5++;
+    }
+    else if ((-0.03F < fProfit) && (fProfit <= -0.01F)) {
+        pstDealInfo->ulLossP3++;
+    }
+    else if ((-0.01F < fProfit) && (fProfit <= 0.00F)) {
+        pstDealInfo->ulLossP1++;
+    }
+    else if ((0.00F < fProfit) && (fProfit <= 0.01F)) {
+        pstDealInfo->ulGainP1++;
+    }
+    else if ((0.01F < fProfit) && (fProfit <= 0.03F)) {
+        pstDealInfo->ulGainP3++;
+    }
+    else if ((0.03F < fProfit) && (fProfit <= 0.05F)) {
+        pstDealInfo->ulGainP5++;
+    }
+    else if ((0.05F < fProfit) && (fProfit <= 0.10F)) {
+        pstDealInfo->ulGainP10++;
+    }
+    else {
+        pstDealInfo->ulGainMore++;
+    }
+    pstDealInfo->ulTotalDeal++;
+    pstDealInfo->fTotalProfit+=fProfit;
+    pstDealInfo->fMaxProfit=MAX(pstDealInfo->fTotalProfit, pstDealInfo->fMaxProfit);
+    pstDealInfo->fMinProfit=MIN(pstDealInfo->fTotalProfit, pstDealInfo->fMinProfit);
+    
     return;
 }
 
@@ -47,7 +104,7 @@ FLOAT SIM_GetProfit(IN FILE_WHOLE_DATA_S *pstCurrData, IN STOCK_CTRL_S *pstStock
     // take off deal cost 0.3%
     fProfit = ((pstStockCtrl->ulSellPrice * fMulti) + fAdder)/pstStockCtrl->ulBuyPrice - 1.003F;
 
-    DebugOutString("%06u,%u,%u,%u,%u,%.3f\n",
+    printf("%06u,%u,%u,%u,%u,%.3f\n",
         pstStockCtrl->ulCode, pstStockCtrl->ulBuyDate, pstStockCtrl->ulBuyPrice, 
         pstStockCtrl->ulSellDate, pstStockCtrl->ulSellPrice, fProfit);
 
@@ -163,32 +220,30 @@ BOOL_T SIM_HandleWish(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
 VOID SIM_GetMethod(IN CHAR *szMethod)
 {
     ULONG ulMethod;
+    METHOD_FUNC_SET_S stMethodFunc;
 
     ulMethod = GetMethod(szMethod);
 
-    switch (ulMethod) {
-        case METHOD_RISE:
-            g_pfGetGainPrice = RISE_GetGainPrice;
-            g_pfGetLossPrice = RISE_GetLossPrice;
-            g_pfGetBuyPrice  = RISE_GetBuyPrice;
-            g_pfGetSellPrice = RISE_GetSellPrice;
-            g_pfDailyChoose  = RISE_Choose;
-            
-            break;
-        default:
-            printf("method not support\n");
-            exit(5);
-            break;
-    }
+    // get functions by method
+    METHOD_GetFuncSet(ulMethod, &stMethodFunc);
+    g_pfGetGainPrice = stMethodFunc.pfGetGainPrice;
+    g_pfGetLossPrice = stMethodFunc.pfGetLossPrice;
+    g_pfGetBuyPrice  = stMethodFunc.pfGetBuyPrice; 
+    g_pfGetSellPrice = stMethodFunc.pfGetSellPrice;
+    g_pfDailyChoose  = stMethodFunc.pfDailyChoose;
 
     return;
 }
+
+#define SIM_TOTAL_SHARE_CNT       (4)
 
 int main(int argc,char *argv[])
 {
     ULONG i, ulCodeCnt;
     ULONG ulIndex;
     BOOL_T bIsSell, bIsBuy;
+    FLOAT fProfit;
+    ULONG ulShareCnt=0;
     SIM_DEAL_INFO_S stDealInfo;
     ULONG ulBeginDate, ulEndDate, ulCurrDate;
     ULONG *pulCodeList = NULL;
@@ -261,15 +316,19 @@ int main(int argc,char *argv[])
                 bIsSell = SIM_HandleHold(pstCurrData, pstStockCtrl);
                 if (BOOL_FALSE != bIsSell) {
                     // stock sold
-                    stDealInfo.fTotalProfit += SIM_GetProfit(pstCurrData, pstStockCtrl);
-                    stDealInfo.ulTotalDeal++;
+                    fProfit = SIM_GetProfit(pstCurrData, pstStockCtrl);
+                    SIM_SetDealInfo(fProfit, &stDealInfo);
+                    ulShareCnt--;
                 }
             }
 
             if (BOOL_FALSE != pstStockCtrl->bIsWish) {
                 // handle Wish
-                bIsBuy = SIM_HandleWish(pstCurrData, pstStockCtrl);
                 pstStockCtrl->bIsWish = BOOL_FALSE;
+                if (ulShareCnt < SIM_TOTAL_SHARE_CNT) {
+                    bIsBuy = SIM_HandleWish(pstCurrData, pstStockCtrl);
+                    if (BOOL_FALSE != bIsBuy) ulShareCnt++;
+                }
             }
 
             // get wishlist

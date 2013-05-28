@@ -118,11 +118,6 @@ ULONG GetCurrentDate(VOID);
 #define INDEX_NEXT      (0x11)      //if not found, return the nearest date after ulDate
 ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulFlag, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstWholeEntry);
 
-extern unsigned long g_aulStockCode[];
-extern unsigned long g_ulTotalCount;
-
-#define METHOD_RISE      (0x0001)
-ULONG GetMethod(IN CHAR* szMethod);
 ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList);
 
 #define RISE_TYPE_BEGIN             (0x01UL)
@@ -139,12 +134,30 @@ FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax);
 
 BOOL_T IsVaildDate(IN ULONG ulDate);
 VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData, OUT FLOAT *pfMulti, OUT FLOAT *pfAdder);
+ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean);
+ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate);
 
-typedef ULONG (*GetGainPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
-typedef ULONG (*GetLossPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
-typedef ULONG (*GetBuyPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
-typedef ULONG (*GetSellPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
-typedef BOOL_T (*Choose_PF)(IN ULONG, IN FILE_WHOLE_DATA_S *, OUT CHOOSE_PRE_DEAL_S *);
+
+#define CANDLE_TYPE_LINE                (1UL)
+#define CANDLE_TYPE_T_INVERSE           (2UL)
+#define CANDLE_TYPE_T_RIGHT             (3UL)
+#define CANDLE_TYPE_HAMMER_INVERSE      (4UL)
+#define CANDLE_TYPE_HAMMER_RIGHT        (5UL)
+#define CANDLE_TYPE_CROSS_LONG          (6UL)
+#define CANDLE_TYPE_CROSS               (7UL)
+#define CANDLE_TYPE_LITTLE_LOSS         (8UL)
+#define CANDLE_TYPE_LITTLE_GAIN         (9UL)
+#define CANDLE_TYPE_MIDDLE_LOSS         (10UL)
+#define CANDLE_TYPE_MIDDLE_GAIN         (11UL)
+#define CANDLE_TYPE_BARE_FEET_LOSS      (12UL)
+#define CANDLE_TYPE_BARE_FEET_GAIN      (13UL)
+#define CANDLE_TYPE_BARE_HEAD_LOSS      (14UL)
+#define CANDLE_TYPE_BARE_HEAD_GAIN      (15UL)
+#define CANDLE_TYPE_BARE_LARGE_LOSS     (16UL)
+#define CANDLE_TYPE_BARE_LARGE_GAIN     (17UL)
+#define CANDLE_TYPE_LARGE_LOSS          (18UL)
+#define CANDLE_TYPE_LARGE_GAIN          (19UL)
+ULONG GetCandleType(IN FILE_WHOLE_DATA_S *pstData);
 
 #endif
 
