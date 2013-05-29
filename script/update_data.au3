@@ -1,8 +1,13 @@
 #include <stock_list.au3>
 
+HotKeySet("{ESC}", "quit")
+Func quit ()
+   Exit
+EndFunc
+
 Global $OrgData = "F:\StockAnalyser\build\StockAnalyser\Debug\OrgData.exe "
 Global $SrcDir  = ' "D:\Program Files (x86)\THS\history"'
-;Global $SrcDir  = ' "F:\current"'
+;Global $SrcDir  = ' "D:\Program Files (x86)\QianLong\qijian\QLDATA\history" '
 Global $TrgDir  = " F:\StockAnalyser\database"
 
 Local $StockList = GetStockList()

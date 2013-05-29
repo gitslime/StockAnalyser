@@ -42,7 +42,6 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
 
     // set daily price to target data
     for (i=0,j=0;i<ulSrcEntryCnt;i++,pstDailyData++) {
-        assert((BOOL_TRUE == IS_VAILD_PRICE(pstDailyData->ulBeginWithCheck)));
         if ((0 == pstDailyData->ulDate) || (BOOL_FALSE == IS_VAILD_PRICE(pstDailyData->ulBeginWithCheck)) ||
             (0x80000000 == pstDailyData->ulVolWithCheck)) continue;  //invaild data
 
