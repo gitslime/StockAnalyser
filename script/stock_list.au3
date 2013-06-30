@@ -2,7 +2,7 @@
 ; Get stock code list from THS, the first array is count, and the following are code list
 Func GetStockList()
    Local $CodeList[3000]
-   Local $FILE_StockNameList = "D:\THS\stocknametable.txt"
+   Local $FILE_StockNameList = "D:\Program Files (x86)\THS\stocknametable.txt"
    Local $fp = FileOpen($FILE_StockNameList, 0)
    
    ; Check if file opened for reading OK

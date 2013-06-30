@@ -1,76 +1,66 @@
 #include "../common/comm.h"
 #include "../common/file.h"
 
-#define RISE_HOLD_DAYS              (1)     // days hold a stock
 #define RISE_WATCH_DAYS             (3)     // days watching to judge whether to buy
-#define RISE_MEAN_DAYS              (15)
 #define RISE_HOLD_THRESHOLD         (0.093F)
 
-VOID RISE_Statistics(IN ULONG ulIndex, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstSettleData)
+ULONG RISE_GetMinIndex(VOID)
 {
-    ULONG i, j, ulStartIndex;
-    ULONG ulWatchCandleType, ulCandleType;
-    FLOAT fHoldRise;
-    FILE_WHOLE_DATA_S *pstBuy   = NULL;
-    FILE_WHOLE_DATA_S *pstBase  = NULL;
-    FILE_WHOLE_DATA_S *pstTemp  = NULL;
-    FILE_WHOLE_DATA_S *pstWatch = pstSettleData;
+    return RISE_WATCH_DAYS;
+}
 
-    // make sure array is not out of bound
-    ulStartIndex = RISE_HOLD_DAYS+RISE_WATCH_DAYS;
-    if (ulIndex < ulStartIndex) {
-        pstWatch+=(ulStartIndex-ulIndex);
-        ulEntryCnt-=(ulStartIndex-ulIndex);
-        if (ulEntryCnt > 0xFF000000) return;
-    }
-    pstBuy  = pstWatch-RISE_HOLD_DAYS;
-    pstBase = pstBuy-RISE_WATCH_DAYS;
+BOOL_T RISE_Statistics(IN FILE_WHOLE_DATA_S *pstSettleData)
+{
+    ULONG i;
+    FLOAT afRise[RISE_WATCH_DAYS];
+    FILE_WHOLE_DATA_S *pstWatch = pstSettleData-RISE_WATCH_DAYS+1;
 
-    for (i=0;i<ulEntryCnt;i++, pstBase++, pstBuy++, pstWatch++) {
-        (VOID)GetTotalRise(RISE_HOLD_DAYS, pstWatch, RISE_TYPE_END, &fHoldRise);
-        if (fHoldRise < RISE_HOLD_THRESHOLD) continue;
-
-        ulWatchCandleType=0;
-        for (j=RISE_WATCH_DAYS,pstTemp=pstBuy;j>0;j--,pstTemp--) {
-            ulCandleType=GetCandleType(pstTemp);
-            ulWatchCandleType = ulWatchCandleType << 8;
-            ulWatchCandleType = ulWatchCandleType | ulCandleType;
-        }
-
-        printf("%d,%u,%u,%u,%u,%f\n", pstBuy->ulDate, 
-            ulWatchCandleType&0xFF, (ulWatchCandleType&0xFF00)>>8, (ulWatchCandleType&0xFF0000)>>16, 
-            ulWatchCandleType, fHoldRise);
+    // get each rise rate
+    for (i=0;i<RISE_WATCH_DAYS;i++,pstWatch++) {
+        (VOID)GetTotalRise(1, pstWatch, RISE_TYPE_END, &afRise[i]);
     }
 
-    return;
+    if (afRise[0]<0) return BOOL_FALSE;
+    for (i=1;i<RISE_WATCH_DAYS;i++,pstWatch++) {
+        // make sure rise higher and higher
+        if (afRise[i]<afRise[i-1]) return BOOL_FALSE;
+    }
+    printf("%d,", pstSettleData->ulDate);
+    for (i=0;i<RISE_WATCH_DAYS;i++,pstWatch++) {
+        printf("%.4f,", afRise[i]);
+    }
+
+    return BOOL_TRUE;
 }
 
 #define RISE_CHOOSE_DAYS        (RISE_WATCH_DAYS-1)
 #define RISE_THRESHOLD_RATE     (1.10F)
 #define RISE_THRESHOLD_DAILY    (1.02F)
 #define RISE_BUY_HOUR           (14)
-#if 0
+
 BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo)
 {
     BOOL_T bIsContinuous;
-    FLOAT  fPrevRise;
+    FLOAT  fPrevRise, fCurrRise;
     FLOAT  fThreshPrice;
     ULONG  ulMeanPrice=INVAILD_ULONG;
     FILE_WHOLE_DATA_S *pstBase = pstCurrData - RISE_CHOOSE_DAYS;
     FILE_WHOLE_DATA_S *pstTemp = pstBase-1;
 
     // make sure array is not out of bound
-    if (ulIndex <= (RISE_CHOOSE_DAYS+RISE_MEAN_DAYS)) return BOOL_FALSE;
+    if (ulIndex <= (RISE_CHOOSE_DAYS)) return BOOL_FALSE;
+    
+#if 0
 
     if (ulIndex>(RISE_CHOOSE_DAYS+1)) {
         (VOID)GetTotalRise(1, pstBase, RISE_TYPE_END, &fPrevRise);
         if (fPrevRise > 0) return BOOL_FALSE;
     }
-    
+
+
     ulMeanPrice = GetMean(RISE_MEAN_DAYS, pstBase, ulMeanPrice);
     if (pstBase->stDailyPrice.ulEnd>ulMeanPrice) return BOOL_FALSE;
 
-    #if 1
     {
         ULONG i;
         ULONG ulNextMean;
@@ -81,11 +71,15 @@ BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOO
         }
     }
     #endif
+    GetTotalRise(1, pstCurrData-1, RISE_TYPE_END, &fPrevRise);
+    if (fPrevRise<0) return BOOL_FALSE;
+    GetTotalRise(1, pstCurrData, RISE_TYPE_END, &fCurrRise);
+    if (fCurrRise < fPrevRise) return BOOL_FALSE;
     
-    bIsContinuous = GetTotalRise(RISE_CHOOSE_DAYS, pstCurrData, RISE_TYPE_END, &fPrevRise);
-    if (BOOL_FALSE == bIsContinuous) return BOOL_FALSE;
+    //bIsContinuous = GetTotalRise(RISE_CHOOSE_DAYS, pstCurrData, RISE_TYPE_END, &fPrevRise);
+    //if (BOOL_FALSE == bIsContinuous) return BOOL_FALSE;
 
-    if (fPrevRise > 0.15) return BOOL_FALSE;
+    //if (fPrevRise > 0.15) return BOOL_FALSE;
 
     pstDealInfo->bIsSell    = BOOL_FALSE;
     pstDealInfo->usDealHour = RISE_BUY_HOUR;
@@ -93,46 +87,18 @@ BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOO
     pstDealInfo->bIsHigher  = BOOL_TRUE;
 
     // make sure rising continuously
-    fThreshPrice = MAX((RISE_THRESHOLD_RATE  * pstBase->stDailyPrice.ulEnd),
-                       (RISE_THRESHOLD_DAILY * pstCurrData->stDailyPrice.ulEnd));
+    fThreshPrice = (1+fCurrRise)*pstCurrData->stDailyPrice.ulEnd;
+    //fThreshPrice = MAX((RISE_THRESHOLD_RATE  * pstBase->stDailyPrice.ulEnd),
+    //                   (RISE_THRESHOLD_DAILY * pstCurrData->stDailyPrice.ulEnd));
     
     pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(fThreshPrice);
 
     return BOOL_TRUE;
 }
-#endif
-BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo)
-{
-    FLOAT fThreshPrice;
-    ULONG ulCandleType;
-    FILE_WHOLE_DATA_S *pstPrev = pstCurrData-1;
 
-    if (ulIndex<RISE_CHOOSE_DAYS) return BOOL_FALSE;
-
-    ulCandleType=GetCandleType(pstCurrData);
-    if ((CANDLE_TYPE_BARE_LARGE_GAIN != ulCandleType) &&
-        (CANDLE_TYPE_LARGE_LOSS != ulCandleType) &&
-        (CANDLE_TYPE_LARGE_GAIN != ulCandleType))
-        return BOOL_FALSE;
-
-    ulCandleType=GetCandleType(pstPrev);
-    if ((CANDLE_TYPE_BARE_LARGE_GAIN != ulCandleType) &&
-        (CANDLE_TYPE_LARGE_GAIN != ulCandleType))
-        return BOOL_FALSE;
-
-    pstDealInfo->bIsSell    = BOOL_FALSE;
-    pstDealInfo->usDealHour = RISE_BUY_HOUR;
-    pstDealInfo->usDealMin  = (USHORT)RandomUlong(50,60);
-    pstDealInfo->bIsHigher  = BOOL_TRUE;
-
-    fThreshPrice = 1.05F * pstCurrData->stDailyPrice.ulEnd;
-    pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(fThreshPrice);
-
-    return BOOL_TRUE;
-}
-
-#define RISE_GAIN_THRESHOLD      (1.08F) 
-#define RISE_LOSS_THRESHOLD      (0.89F)
+#define RISE_HOLD_DAYS           (5)            // days hold a stock
+#define RISE_GAIN_THRESHOLD      (1.053F) 
+#define RISE_LOSS_THRESHOLD      (0.973F)
 
 ULONG RISE_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
 {

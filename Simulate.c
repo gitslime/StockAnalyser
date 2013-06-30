@@ -181,7 +181,13 @@ BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
         }
         else {                          // only reach lost price
             if (pstCurrData->stDailyPrice.ulBegin < pstStockCtrl->ulLossPrice) {
-                ulSellPrice = pstCurrData->stDailyPrice.ulBegin;
+                // drop limit can not sell
+                if (pstCurrData->stDailyPrice.ulLow==pstCurrData->stDailyPrice.ulHigh){
+                    ulSellPrice = INVAILD_ULONG;
+                }
+                else {
+                    ulSellPrice = pstCurrData->stDailyPrice.ulBegin;
+                }
             }
             else {
                 ulSellPrice = pstStockCtrl->ulLossPrice;
@@ -194,6 +200,10 @@ BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
         pstStockCtrl->ulSellPrice = ulSellPrice;
         pstStockCtrl->bIsHold     = BOOL_FALSE;
         bIsSell = BOOL_TRUE;
+    }
+    else {      // update gain price and loss price
+        pstStockCtrl->ulGainPrice = g_pfGetGainPrice(pstCurrData, pstStockCtrl);
+        pstStockCtrl->ulLossPrice = g_pfGetLossPrice(pstCurrData, pstStockCtrl);
     }
 
     return bIsSell;
@@ -235,7 +245,7 @@ VOID SIM_GetMethod(IN CHAR *szMethod)
     return;
 }
 
-#define SIM_TOTAL_SHARE_CNT       (4)
+#define SIM_TOTAL_SHARE_CNT       (4000)
 
 int main(int argc,char *argv[])
 {
@@ -244,6 +254,7 @@ int main(int argc,char *argv[])
     BOOL_T bIsSell, bIsBuy;
     FLOAT fProfit;
     ULONG ulShareCnt=0;
+    ULONG ulShareMax=0;
     SIM_DEAL_INFO_S stDealInfo;
     ULONG ulBeginDate, ulEndDate, ulCurrDate;
     ULONG *pulCodeList = NULL;
@@ -328,6 +339,7 @@ int main(int argc,char *argv[])
                 if (ulShareCnt < SIM_TOTAL_SHARE_CNT) {
                     bIsBuy = SIM_HandleWish(pstCurrData, pstStockCtrl);
                     if (BOOL_FALSE != bIsBuy) ulShareCnt++;
+                    ulShareMax=MAX(ulShareCnt, ulShareMax);
                 }
             }
 
@@ -347,6 +359,7 @@ int main(int argc,char *argv[])
     }
     free(astStockCtrl);
 
+    printf("\nshare max=%d, effective profit=%.2f%%\n", ulShareMax,stDealInfo.fTotalProfit*100/ulShareMax);
     SIM_PrintDealInfo(&stDealInfo);
     return 0;
 }

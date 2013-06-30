@@ -2,12 +2,35 @@
 #include "common/file.h"
 #include "method/method.h"
 
+#define STAT_WATCH_SHORT        (3)
+#define STAT_WATCH_MIDDLE       (10)
+#define STAT_WATCH_LONG         (30)
+
+VOID STAT_PrintWatch(IN ULONG ulIndex, IN ULONG ulEntryCnt, IN ULONG ulWatchDays, IN FILE_WHOLE_DATA_S *pstCurr)
+{
+    FLOAT fWatchRise;
+
+    if ((ulIndex+ulWatchDays)>=ulEntryCnt) {
+        printf("-100,-100,");        //print an invaild number for excel which deals only numbers
+    }
+    else {
+        (VOID)GetTotalRise(ulWatchDays, pstCurr+ulWatchDays, RISE_TYPE_LOW, &fWatchRise);
+        printf("%f,", fWatchRise);
+        (VOID)GetTotalRise(ulWatchDays, pstCurr+ulWatchDays, RISE_TYPE_HIGH, &fWatchRise);
+        printf("%f,", fWatchRise);
+    }
+    return;
+}
+
 VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULONG ulBeginDate, IN ULONG ulEndDate)
 {
-    ULONG ulEntryCnt, ulStatCnt;
+    ULONG i, ulEntryCnt;
     ULONG ulBeginIndex, ulEndIndex;
+    ULONG ulThreshPrice;
     METHOD_FUNC_SET_S stMethodFunc;
-    Statistics_PF pfStatistics = NULL;
+    Choose_PF pfChoose = NULL;
+    Statistics_PF pfStat = NULL;
+    CHOOSE_PRE_DEAL_S stDealInfo;
     FILE_WHOLE_DATA_S *astWholeData = NULL;
     FILE_WHOLE_DATA_S *pstStatData = NULL;
 
@@ -22,13 +45,26 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
         return;
     }
 
-    ulStatCnt   = ulEndIndex - ulBeginIndex + 1;
-    pstStatData = &astWholeData[ulBeginIndex];
-    assert(ulStatCnt <= ulEntryCnt);
-
-    // get function by method
-    METHOD_GetFuncSet(ulMethod, &stMethodFunc);
-    pfStatistics = stMethodFunc.pfStatistics;
+    METHOD_GetFuncSet(ulMethod, &stMethodFunc);    // get function by method
+    pfChoose = stMethodFunc.pfDailyChoose;
+    pfStat = stMethodFunc.pfStatistics;
+    memset(&stDealInfo, 0, sizeof(stDealInfo));
+    for (i=ulBeginIndex,pstStatData = &astWholeData[ulBeginIndex];i<=ulEndIndex;i++, pstStatData++) {
+        ulThreshPrice=FILE_REAL2PRICE(stDealInfo.fThresholdPrice);
+        if (((BOOL_FALSE == stDealInfo.bIsHigher) && (pstStatData->stDailyPrice.ulLow < ulThreshPrice)) ||
+            ((BOOL_FALSE != stDealInfo.bIsHigher) && (pstStatData->stDailyPrice.ulEnd > ulThreshPrice)))
+        {
+            printf("%d,",pstStatData->ulDate);
+            pfStat(pstStatData);
+            STAT_PrintWatch(i, ulEntryCnt, STAT_WATCH_SHORT, pstStatData);        
+            STAT_PrintWatch(i, ulEntryCnt, STAT_WATCH_MIDDLE, pstStatData);
+            STAT_PrintWatch(i, ulEntryCnt, STAT_WATCH_LONG, pstStatData);
+            printf("\n");
+            memset(&stDealInfo, 0, sizeof(stDealInfo));
+        }
+        
+        (VOID)pfChoose(i, pstStatData, &stDealInfo);
+    }
 
     free(astWholeData);
 

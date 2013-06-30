@@ -101,6 +101,13 @@ ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMea
     return (ULONG)((FLOAT)ulSum/ulDays);
 }
 
+FLOAT GetVolRatio(IN FILE_WHOLE_DATA_S *pstData)
+{
+    FILE_WHOLE_DATA_S *pstPrev = pstData-1;
+
+    return ((FLOAT)pstData->stDailyPrice.ulVol)/((FLOAT)pstPrev->stDailyPrice.ulVol);
+}
+
 ULONG GetCandleType(IN FILE_WHOLE_DATA_S *pstDaily)
 {
 #define SOILD_TYPE_CLOSE(fRate)         ((-0.004F<=(fRate))&&((fRate)<=0.004F))

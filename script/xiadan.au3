@@ -72,7 +72,8 @@ Func XiadanSetPreDeal($Code, $IsSell, $Hour, $Min, $IsHigher, $Price)
    Local $SetPrice  = 100
    Local $Cnt = Floor($SetPrice/$Price) * 100
    
-   If $Cnt*$Price < 9200 Then Return 0
+   ;If $Cnt*$Price < 9200 Then Return 0
+   If $Cnt*$Price < 9200 Then $Cnt+=100
    
    Send($Code)
    Sleep(200)
@@ -213,8 +214,8 @@ Func XiadanGetTradeInfobyProgram ()
    Local $TotalCnt=0
    Local $Trade[3000]
    
-   Local $Date=@YEAR&@MON&@MDAY
-   ;Local $Date=20130503
+   ;Local $Date=@YEAR&@MON&@MDAY
+   Local $Date=20130627
    ;MsgBox(0, "Date", $Date)
    
    Local $foo = Run("F:\StockAnalyser\build\StockAnalyser\Debug\Choose.exe rise F:\StockAnalyser\database "&$Date&" all", "", @SW_HIDE, $STDOUT_CHILD)
@@ -300,4 +301,4 @@ XiadanLogin()
 XiadanInitAccount()
 XiadanInitPreDeal()
 XiadanDailyTrade()
-XiadanClearHold()
+;XiadanClearHold()
