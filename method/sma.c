@@ -3,7 +3,7 @@
 
 #define SMA_MEAN_DAYS   (15)
 #define SMA_CHECK_DAYS  (30)
-#define SMA_CHECK_THRETHOLD (-0.1500F)
+#define SMA_CHECK_THRETHOLD (-0.1800F)
 
 ULONG SMA_GetMinIndex(VOID)
 {
@@ -58,8 +58,8 @@ BOOL_T SMA_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOS
     ulCurrMa=GetMean(SMA_MEAN_DAYS,pstChoose,ulPrevMa);
 
     // previous data across ma
-    if (pstPrev->stDailyPrice.ulBegin > ulPrevMa) return BOOL_FALSE;
-    if (pstPrev->stDailyPrice.ulEnd   < ulPrevMa) return BOOL_FALSE;
+    if (pstPrev->stDailyPrice.ulBegin > (ulPrevMa*0.99)) return BOOL_FALSE;
+    if (pstPrev->stDailyPrice.ulEnd   < (ulPrevMa*1.01)) return BOOL_FALSE;
 
     // choose data above ma and previous price
     if (pstChoose->stDailyPrice.ulLow < ulCurrMa) return BOOL_FALSE;
