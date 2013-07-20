@@ -46,14 +46,14 @@ BOOL_T SMA_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOS
     for (i=SMA_MEAN_DAYS;i>0;i--,pstTemp--) {
         if (FILE_VAILD_FACTOR==pstTemp->stFactor.ulFlag) return BOOL_FALSE;
     }
-#if 1
+    #if 1
     // check volume ratio
     fPrevVolRatio=GetVolRatio(pstPrev);
     if ((fPrevVolRatio<1) || (fPrevVolRatio>2)) return BOOL_FALSE;
 
     fChooseVolRatio=GetVolRatio(pstChoose);
     if (fChooseVolRatio>2) return BOOL_FALSE;
-#endif
+    #endif
     ulPrevMa=GetMean(SMA_MEAN_DAYS,pstPrev,INVAILD_ULONG);
     ulCurrMa=GetMean(SMA_MEAN_DAYS,pstChoose,ulPrevMa);
 
@@ -115,6 +115,9 @@ ULONG SMA_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
         pstData--;
     }
 
+    // set buy price
+    if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
+
     // get times of price below ma
     for(i=0,ulPrevMa=INVAILD_ULONG,ulBelowCnt=0;i<ulHoldDays;i++,pstData++) {
         ulCurrMa=GetMean(SMA_MEAN_DAYS,pstData,ulPrevMa);
@@ -147,6 +150,9 @@ ULONG SMA_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
         if (pstData->ulDate==pstStockCtrl->ulBuyDate) break;
         pstData--;
     }
+
+    // set buy price
+    if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
 
     // get low point before buy
     for (i=SMA_MEAN_DAYS,ulPrevLow=pstData->stDailyPrice.ulLow;i>0;i--,pstData--) {

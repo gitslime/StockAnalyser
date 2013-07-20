@@ -245,8 +245,6 @@ VOID SIM_GetMethod(IN CHAR *szMethod)
     return;
 }
 
-#define SIM_TOTAL_SHARE_CNT       (4000)
-
 int main(int argc,char *argv[])
 {
     ULONG i, ulCodeCnt;
@@ -255,6 +253,7 @@ int main(int argc,char *argv[])
     FLOAT fProfit;
     ULONG ulShareCnt=0;
     ULONG ulShareMax=0;
+    ULONG ulTotalShare;
     SIM_DEAL_INFO_S stDealInfo;
     ULONG ulBeginDate, ulEndDate, ulCurrDate;
     ULONG *pulCodeList = NULL;
@@ -267,8 +266,8 @@ int main(int argc,char *argv[])
     FILE_WHOLE_DATA_S *apstWholeData[STOCK_TOTAL_CNT];
     
     //check parameter
-    if ((argc < 6) || (argc > 7)) {
-        printf("USAGE: %s method path begin-date end-date { code | all } [debug]", argv[0]);
+    if ((argc < 7) || (argc > 8)) {
+        printf("USAGE: %s method path begin-date end-date share-cnt { code | all } [debug]", argv[0]);
         exit(1);
     }
     SIM_GetMethod(argv[1]);
@@ -278,9 +277,10 @@ int main(int argc,char *argv[])
     if (0 == _stricmp(argv[argc-1], "debug"))
         g_bIsDebugMode = BOOL_TRUE;
     
-    ulCodeCnt = GetCodeList(argv[5], &pulCodeList);
+    ulCodeCnt = GetCodeList(argv[6], &pulCodeList);
     ulBeginDate = (ULONG)atol(argv[3]);
     ulEndDate = (ULONG)atol(argv[4]);
+    ulTotalShare = (ULONG)atol(argv[5]);
     assert(ulBeginDate <= ulEndDate);
     assert(ulCodeCnt < STOCK_TOTAL_CNT);
     memset(&stDealInfo, 0, sizeof(stDealInfo));
@@ -336,7 +336,7 @@ int main(int argc,char *argv[])
             if (BOOL_FALSE != pstStockCtrl->bIsWish) {
                 // handle Wish
                 pstStockCtrl->bIsWish = BOOL_FALSE;
-                if (ulShareCnt < SIM_TOTAL_SHARE_CNT) {
+                if (ulShareCnt < ulTotalShare) {
                     bIsBuy = SIM_HandleWish(pstCurrData, pstStockCtrl);
                     if (BOOL_FALSE != bIsBuy) ulShareCnt++;
                     ulShareMax=MAX(ulShareCnt, ulShareMax);

@@ -33,14 +33,13 @@ BOOL_T RISE_Statistics(IN FILE_WHOLE_DATA_S *pstSettleData)
     return BOOL_TRUE;
 }
 
-#define RISE_CHOOSE_DAYS        (RISE_WATCH_DAYS-1)
+#define RISE_CHOOSE_DAYS        (2)
 #define RISE_THRESHOLD_RATE     (1.10F)
 #define RISE_THRESHOLD_DAILY    (1.02F)
 #define RISE_BUY_HOUR           (14)
 
 BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo)
 {
-    BOOL_T bIsContinuous;
     FLOAT  fPrevRise, fCurrRise;
     FLOAT  fThreshPrice;
     ULONG  ulMeanPrice=INVAILD_ULONG;
@@ -49,15 +48,15 @@ BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOO
 
     // make sure array is not out of bound
     if (ulIndex <= (RISE_CHOOSE_DAYS)) return BOOL_FALSE;
-    
-#if 0
 
+    #if 0
     if (ulIndex>(RISE_CHOOSE_DAYS+1)) {
         (VOID)GetTotalRise(1, pstBase, RISE_TYPE_END, &fPrevRise);
         if (fPrevRise > 0) return BOOL_FALSE;
     }
+    #endif
 
-
+#if 0
     ulMeanPrice = GetMean(RISE_MEAN_DAYS, pstBase, ulMeanPrice);
     if (pstBase->stDailyPrice.ulEnd>ulMeanPrice) return BOOL_FALSE;
 
@@ -71,13 +70,17 @@ BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOO
         }
     }
     #endif
-    GetTotalRise(1, pstCurrData-1, RISE_TYPE_END, &fPrevRise);
-    if (fPrevRise<0) return BOOL_FALSE;
-    GetTotalRise(1, pstCurrData, RISE_TYPE_END, &fCurrRise);
-    if (fCurrRise < fPrevRise) return BOOL_FALSE;
-    
-    //bIsContinuous = GetTotalRise(RISE_CHOOSE_DAYS, pstCurrData, RISE_TYPE_END, &fPrevRise);
-    //if (BOOL_FALSE == bIsContinuous) return BOOL_FALSE;
+    //GetTotalRise(1, pstCurrData-1, RISE_TYPE_END, &fPrevRise);
+    //if (fPrevRise<0) return BOOL_FALSE;
+    //GetTotalRise(1, pstCurrData, RISE_TYPE_END, &fCurrRise);
+    //if (fCurrRise < fPrevRise) return BOOL_FALSE;
+
+    // continuously rise by choose days
+    {
+        BOOL_T bIsContinuous;
+        bIsContinuous = GetTotalRise(RISE_CHOOSE_DAYS, pstCurrData, RISE_TYPE_END, &fPrevRise);
+        if (BOOL_FALSE == bIsContinuous) return BOOL_FALSE;
+    }
 
     //if (fPrevRise > 0.15) return BOOL_FALSE;
 
@@ -87,31 +90,51 @@ BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOO
     pstDealInfo->bIsHigher  = BOOL_TRUE;
 
     // make sure rising continuously
-    fThreshPrice = (1+fCurrRise)*pstCurrData->stDailyPrice.ulEnd;
-    //fThreshPrice = MAX((RISE_THRESHOLD_RATE  * pstBase->stDailyPrice.ulEnd),
-    //                   (RISE_THRESHOLD_DAILY * pstCurrData->stDailyPrice.ulEnd));
+    //fThreshPrice = (1+fCurrRise)*pstCurrData->stDailyPrice.ulEnd;
+    fThreshPrice = MAX((RISE_THRESHOLD_RATE  * pstBase->stDailyPrice.ulEnd),
+                       (RISE_THRESHOLD_DAILY * pstCurrData->stDailyPrice.ulEnd));
     
     pstDealInfo->fThresholdPrice = FILE_PRICE2REAL(fThreshPrice);
 
     return BOOL_TRUE;
 }
 
-#define RISE_HOLD_DAYS           (5)            // days hold a stock
-#define RISE_GAIN_THRESHOLD      (1.053F) 
-#define RISE_LOSS_THRESHOLD      (0.973F)
+#define RISE_HOLD_DAYS           (1)            // days hold a stock
+#define RISE_GAIN_THRESHOLD      (1.033F) 
+#define RISE_LOSS_THRESHOLD      (0.923F)
 
 ULONG RISE_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
 {
-    assert(pstCurrData->ulDate == pstStockCtrl->ulBuyDate);
+    ULONG ulHoldDays=0;
+    FILE_WHOLE_DATA_S *pstData=pstCurrData;
 
-    return (ULONG)(pstCurrData->stDailyPrice.ulEnd * RISE_GAIN_THRESHOLD);
+    assert(pstCurrData->ulDate>=pstStockCtrl->ulBuyDate);
+
+    // point to buy date
+    while (1) {
+        ulHoldDays++;
+        if (pstData->ulDate==pstStockCtrl->ulBuyDate) break;
+        pstData--;
+    }
+
+    return (ULONG)(pstData->stDailyPrice.ulEnd * RISE_GAIN_THRESHOLD);
 }
 
 ULONG RISE_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
 {
-    assert(pstCurrData->ulDate == pstStockCtrl->ulBuyDate);
+    ULONG ulHoldDays=0;
+    FILE_WHOLE_DATA_S *pstData=pstCurrData;
 
-    return (ULONG)(pstCurrData->stDailyPrice.ulEnd * RISE_LOSS_THRESHOLD);
+    assert(pstCurrData->ulDate>=pstStockCtrl->ulBuyDate);
+
+    // point to buy date
+    while (1) {
+        ulHoldDays++;
+        if (pstData->ulDate==pstStockCtrl->ulBuyDate) break;
+        pstData--;
+    }
+
+    return (ULONG)(pstData->stDailyPrice.ulEnd * RISE_LOSS_THRESHOLD);
 }
 
 ULONG RISE_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
