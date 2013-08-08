@@ -7,6 +7,7 @@ VOID CHOOSE_Track(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ul
     ULONG ulEntryCnt;
     ULONG ulIndex;
     ULONG ulLatestEndPrice;
+    ULONG ulGainPriceDiff, ulLossPriceDiff;
     METHOD_FUNC_SET_S stMethodFunc;
     STOCK_CTRL_S stStockCtrl;
     FILE_WHOLE_DATA_S *astWholeData = NULL;
@@ -37,10 +38,15 @@ VOID CHOOSE_Track(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ul
 
     free(astWholeData);
 
-    printf("%06u, %u, %.2f, %.2f, %u, %.2f, %u\n",
+    // price may be out of lastest end price
+    ulGainPriceDiff=(stStockCtrl.ulGainPrice > (ulLatestEndPrice+10)) ? 
+                    (stStockCtrl.ulGainPrice-ulLatestEndPrice) : 10;
+    ulLossPriceDiff=(ulLatestEndPrice>(stStockCtrl.ulLossPrice+10)) ? 
+                    (ulLatestEndPrice-stStockCtrl.ulLossPrice) : 10;
+    printf("%06u,%u,%.2f,%.2f,%u,%.2f,%u\n",
            ulCode, stStockCtrl.ulBuyDate, FILE_PRICE2REAL(ulLatestEndPrice),
-           FILE_PRICE2REAL(stStockCtrl.ulLossPrice), (ulLatestEndPrice-stStockCtrl.ulLossPrice)/10,
-           FILE_PRICE2REAL(stStockCtrl.ulGainPrice), (stStockCtrl.ulGainPrice-ulLatestEndPrice)/10);
+           FILE_PRICE2REAL(stStockCtrl.ulLossPrice), ulLossPriceDiff/10,
+           FILE_PRICE2REAL(stStockCtrl.ulGainPrice), ulGainPriceDiff/10);
 
     return;
 }

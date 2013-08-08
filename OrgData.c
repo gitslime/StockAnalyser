@@ -192,7 +192,7 @@ int main(int argc,char *argv[])
         printf("USAGE: %s code source_path target_path [debug] [verbose]", argv[0]);
         exit(1);
     }
-    ulStockCode = (ULONG)atol(argv[1]);
+    ulStockCode = GetCodeByIndex(argv[1]);
 
     if ((0 == _stricmp(argv[argc-1], "debug")) || (0 == _stricmp(argv[argc-2], "debug")))
         g_bIsDebugMode = BOOL_TRUE;

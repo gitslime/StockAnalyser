@@ -34,6 +34,11 @@ VOID DebugOutString(IN const CHAR *szFmt, ...);
 #define MIN(a, b)       (((a) < (b)) ? (a) : (b))
 
 #define STOCK_TOTAL_CNT          (2500)
+#define INDEX_CODE_SH           (900001)
+#define INDEX_CODE_SZ           (900002)
+#define INDEX_CODE_ZXB          (900003)
+#define INDEX_CODE_CYB          (900004)
+ULONG GetCodeByIndex(IN CHAR *szIndex);
 
 typedef struct tagPrice
 {
@@ -77,11 +82,14 @@ typedef struct tagStockCtrl
     ULONG  ulCode;
     BOOL_T bIsHold;
     BOOL_T bIsWish;
+    ULONG  ulHoldCnt;
     ULONG  ulWishPrice;
     ULONG  ulGainPrice;
     ULONG  ulLossPrice;
     ULONG  ulBuyDate;
     ULONG  ulBuyPrice;
+    ULONG  ulHoldHigh;
+    ULONG  ulHoldLow;
     ULONG  ulSellDate;
     ULONG  ulSellPrice;
 }STOCK_CTRL_S;
@@ -138,7 +146,7 @@ BOOL_T IsVaildDate(IN ULONG ulDate);
 VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData, OUT FLOAT *pfMulti, OUT FLOAT *pfAdder);
 ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean);
 ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate);
-
+ULONG GetBuyCnt(IN ULONG ulHandLimit, IN ULONG ulBuyPrice);
 
 #define CANDLE_TYPE_LINE                (1UL)
 #define CANDLE_TYPE_T_INVERSE           (2UL)

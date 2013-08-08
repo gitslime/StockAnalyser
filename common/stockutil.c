@@ -108,6 +108,15 @@ FLOAT GetVolRatio(IN FILE_WHOLE_DATA_S *pstData)
     return ((FLOAT)pstData->stDailyPrice.ulVol)/((FLOAT)pstPrev->stDailyPrice.ulVol);
 }
 
+ULONG GetBuyCnt(IN ULONG ulHandLimit, IN ULONG ulBuyPrice)
+{
+    ULONG ulHand=ulHandLimit/ulBuyPrice/100;
+
+    if ((ulHand*ulBuyPrice*100)<(ulHandLimit*0.9)) return 0;
+
+    return ulHand*100;
+}
+
 ULONG GetCandleType(IN FILE_WHOLE_DATA_S *pstDaily)
 {
 #define SOILD_TYPE_CLOSE(fRate)         ((-0.004F<=(fRate))&&((fRate)<=0.004F))
@@ -183,4 +192,13 @@ ULONG GetCandleType(IN FILE_WHOLE_DATA_S *pstDaily)
     return ulCandleType;
 }
 
+ULONG GetCodeByIndex(IN CHAR *szIndex)
+{
+    if (0 == _stricmp(szIndex, "1A0001")) return INDEX_CODE_SH;
+    if (0 == _stricmp(szIndex, "399001")) return INDEX_CODE_SZ;
+    if (0 == _stricmp(szIndex, "399005")) return INDEX_CODE_ZXB;
+    if (0 == _stricmp(szIndex, "399006")) return INDEX_CODE_CYB;
+
+    return (ULONG)atol(szIndex);
+}
 

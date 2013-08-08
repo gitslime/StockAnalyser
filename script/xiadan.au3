@@ -1,11 +1,31 @@
+#RequireAdmin ; get administrator pliviage
+
 #include <Constants.au3>
+#include <Date.au3>
+#include <stock_list.au3>
 
 HotKeySet("{ESC}", "quit")
 Func quit ()
    Exit
 EndFunc
-
+			
 Global $MainTitle = "机构交易专业版"
+Global $CurrHour
+
+Func XiadanSetTime()
+   ; save current hour
+   $CurrHour=@HOUR
+
+   _SetTime(0, @MIN)
+
+EndFunc
+
+Func XiadanRestoreTime ()
+   Local $Hour=$CurrHour+@HOUR
+   ;MsgBox(0, "time", $CurrHour&@CRLF&$Hour)
+   
+   _SetTime($Hour, @MIN)
+EndFunc
 
 Func XiadanLogin ()
    Run("D:\green\xiadan\xiadan.exe")
@@ -16,7 +36,7 @@ Func XiadanLogin ()
    WinActivate($LoginTitle)
    WinWaitActive($LoginTitle)
    Send("hexin{TAB}888888{ENTER}")
-   Sleep(2000)
+   Sleep(200)
    
 EndFunc
 
@@ -27,6 +47,10 @@ Func XiadanInitAccount ()
    
    ; set enviroment
    AutoItSetOption ("MouseCoordMode", 0)    ; relative coords to the active window
+   
+   If WinActivate("消息提示") Then
+	  Send("{ENTER}")
+   EndIf
 
    ; enter account
    MouseClick("primary", 482, 174)
@@ -34,7 +58,8 @@ Func XiadanInitAccount ()
    Send($DealPass &"{TAB}")
    Send($CommPass &"{TAB}")
    Send("{ENTER}")
-   Sleep(1000)
+   
+   WinWaitActive("消息提示")
    Send("{ENTER}")
    
 EndFunc
@@ -72,8 +97,8 @@ Func XiadanSetPreDeal($Code, $IsSell, $Hour, $Min, $IsHigher, $Price)
    Local $SetPrice  = 100
    Local $Cnt = Floor($SetPrice/$Price) * 100
    
-   ;If $Cnt*$Price < 9200 Then Return 0
-   If $Cnt*$Price < 9200 Then $Cnt+=100
+   If $Cnt*$Price < 9200 Then Return 0
+   ;If $Cnt*$Price < 9200 Then $Cnt+=100
    
    Send($Code)
    Sleep(200)
@@ -127,7 +152,7 @@ Func XiadanGetHold ()
    
    WinActivate($MainTitle)
    Send("{F9}")
-   MouseClick("primary", 800, 400)
+   MouseClick("primary", 400, 400)
    Send("^c")					;; copy hold list to clipboard
    Local $HoldList = ClipGet()
    Local $Line = StringSplit($HoldList, @CRLF , 1)		; get each line
@@ -183,6 +208,70 @@ Func XiadanClearHold ()
    
 EndFunc
 
+Func GetTrackCmd($StockCode)
+   Local $IsFound=False
+   Local $TrackCmd
+   Local $FILE_CmdList = "F:\StockAnalyser\track.txt"
+   Local $fp = FileOpen($FILE_CmdList, 0)
+   
+   ; Check if file opened for reading OK
+   If $fp = -1 Then
+	  MsgBox(0, "Error", "Unable to open file " & $FILE_CmdList)
+	  Exit
+   EndIf
+   
+   ; read line by line
+   While 1
+   	  Local $line = FileReadLine($fp)
+	  If @error = -1 Then ExitLoop
+	  
+	  ; get code in the command
+	  Local $CmdSplit = StringSplit($line, " ")
+	  If $CmdSplit[5] <> $StockCode Then
+		 ;MsgBox(0, "not found", "Code "&$CmdSplit[5]&" invaild")
+		 ContinueLoop
+	  EndIf
+	  
+	  ; find the right command
+	  $IsFound=True
+	  $TrackCmd=$line
+	  ;MsgBox(0, "found", $TrackCmd)
+	  ExitLoop
+   WEnd
+   
+   FileClose($fp)
+   
+   If $IsFound=False Then
+	  MsgBox(0, "Error", "Code "&$StockCode&" not found")
+   EndIf
+   
+   Return $TrackCmd
+EndFunc
+
+Func GetTrackPrice ($StockCdde)
+   Local $Cmd=GetTrackCmd($StockCdde)
+   
+   Local $foo = Run($Cmd, "", @SW_HIDE, $STDOUT_CHILD)
+   Local $Output
+   ;Must use loop to read standard output
+   While 1
+	  $Output = StdoutRead($foo)
+	  If @error Then ExitLoop
+   
+	  ;MsgBox(0, "READ", $Output)
+	  Local $Split = StringSplit($Output, ",")
+	  If $Split[0]<>7 Then ContinueLoop
+
+	  Local $TrackPrice[2]
+	  $TrackPrice[0]=$Split[5]
+	  $TrackPrice[1]=$Split[7]
+   WEnd
+   
+   ;MsgBox(0, "Price", "Loss="&$TrackPrice[0]&@CRLF&"Gain="&$TrackPrice[1])
+
+   Return $TrackPrice
+EndFunc
+
 ; returns an array, array[0]=total count of trades, array[i]=one line of trade info
 Func XiadanGetTradeInfobyFile ()
    Local $FILE_Choose = "C:\Users\slime\0422.txt"
@@ -214,11 +303,11 @@ Func XiadanGetTradeInfobyProgram ()
    Local $TotalCnt=0
    Local $Trade[3000]
    
-   ;Local $Date=@YEAR&@MON&@MDAY
-   Local $Date=20130627
+   Local $Date=@YEAR&@MON&@MDAY
+   ;Local $Date=20130805
    ;MsgBox(0, "Date", $Date)
    
-   Local $foo = Run("F:\StockAnalyser\build\StockAnalyser\Debug\Choose.exe rise F:\StockAnalyser\database "&$Date&" all", "", @SW_HIDE, $STDOUT_CHILD)
+   Local $foo = Run("F:\StockAnalyser\build\StockAnalyser\Debug\Choose.exe sma F:\StockAnalyser\database "&$Date&" all", "", @SW_HIDE, $STDOUT_CHILD)
    Local $Output
    While 1
 	  $Output = StdoutRead($foo)
@@ -296,9 +385,63 @@ Func XiadanAutoDraw ($Cnt)
    
 EndFunc
 
+Func XiadanTrack()
+   ; set enviroment
+   AutoItSetOption ("MouseCoordMode", 0)    ; relative coords to the active window
+   
+   if Not WinExists($MainTitle) Then
+	  MsgBox(0, "Error", $MainTitle & "未启动" )
+   EndIf
+   
+   ; get hold list
+   Local $HoldList[100][100]
+   $HoldList = XiadanGetHold()
+   ; skip nihuigou
+   Local $HoldCnt=$HoldList[0][0]
+   Send("{F10}")
+   Sleep(50)
+   
+   ; set each stock
+   For $i=1 To $HoldCnt
+	  If $HoldList[$i][1]=0 Then ContinueLoop
+	  If IsVaildStock($HoldList[$i][0])=False Then ContinueLoop
+	  
+	  Local $Price=GetTrackPrice($HoldList[$i][0])
+	  Local $LossPrice=$Price[0]
+	  Local $GainPrice=$Price[1]
+	  
+	  MouseClick("primary", 400, 138)
+	  ;MsgBox(0, "debug", $i&" "&$HoldCnt)
+	  For $j=2 To $i 
+		 Send("{DOWN}")
+	  Next
+	  Send("!A")
+	  Sleep(50)
+	  Send("{TAB 4}")
+	  Send("{SPACE}")
+	  Send("{TAB}")
+	  Send("{SPACE}")
+	  MouseClick("primary", 222, 212)
+	  sleep(50)
+	  MouseClick("primary", 222, 292)
+	  Sleep(100)
+	  Send("{TAB}"&$LossPrice)
+	  Send("{TAB 9}"&$GainPrice)
+	  Send("!Y")
+	  Sleep(500)
+   Next
+   
+EndFunc
+
 FileDelete("D:\green\xiadan\hexin\data.jx")
+XiadanSetTime()
 XiadanLogin()
 XiadanInitAccount()
 XiadanInitPreDeal()
 XiadanDailyTrade()
-;XiadanClearHold()
+XiadanTrack()
+MsgBox(0, "Xiadan", "Set OK")
+WinClose($MainTitle)
+WinWaitActive($MainTitle)
+Send("{ENTER}")
+XiadanRestoreTime()

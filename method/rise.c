@@ -40,7 +40,7 @@ BOOL_T RISE_Statistics(IN FILE_WHOLE_DATA_S *pstSettleData)
 
 BOOL_T RISE_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo)
 {
-    FLOAT  fPrevRise, fCurrRise;
+    FLOAT  fPrevRise;
     FLOAT  fThreshPrice;
     ULONG  ulMeanPrice=INVAILD_ULONG;
     FILE_WHOLE_DATA_S *pstBase = pstCurrData - RISE_CHOOSE_DAYS;

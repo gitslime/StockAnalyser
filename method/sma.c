@@ -151,7 +151,7 @@ ULONG SMA_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
         pstData--;
     }
 
-    // set buy price
+    // set buy price. it is used for track hold stocks.
     if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
 
     // get low point before buy
