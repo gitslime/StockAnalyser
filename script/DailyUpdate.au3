@@ -1,5 +1,10 @@
 ; auto update daily market price
 
+HotKeySet("{ESC}", "quit")
+Func quit ()
+   Exit
+EndFunc
+
 Local $MainTitle = "同花顺(v8"
 Local $DownloadTitle = "数据下载中心"
 Local $FinishTitle = ""

@@ -92,6 +92,11 @@ BOOL_T SMA_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOS
     return BOOL_TRUE;
 }
 
+VOID SMA_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList)
+{
+    return;
+}
+
 #define SMA_HOLD_DAYS           (5)            // days hold a stock
 #define SMA_GAIN_THRESHOLD      (1.203F) 
 #define SMA_GAIN_STEP           (0.010F)

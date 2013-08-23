@@ -8,7 +8,8 @@
     extern ULONG METHOD##_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
     extern ULONG METHOD##_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl);  \
     extern ULONG METHOD##_GetSellPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
-    extern ULONG METHOD##_GetMinIndex(VOID);
+    extern ULONG METHOD##_GetMinIndex(VOID); \
+    extern VOID METHOD##_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList);
 
 #define METHOD_RISE      (0x0001)
 #define METHOD_SMA       (0x0002)
@@ -43,6 +44,7 @@ ULONG GetMethod(IN CHAR* szMethod)
     (pstFuncSet)->pfDailyChoose  = METHOD##_Choose;         \
     (pstFuncSet)->pfStatistics   = METHOD##_Statistics;     \
     (pstFuncSet)->pfGetMinIndex  = METHOD##_GetMinIndex;    \
+    (pstFuncSet)->pfSortWishList = METHOD##_SortWishList;   \
 }
 
 VOID METHOD_GetFuncSet(IN ULONG ulMethod, OUT METHOD_FUNC_SET_S *pstFuncSet)

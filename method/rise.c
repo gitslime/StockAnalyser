@@ -9,6 +9,11 @@ ULONG RISE_GetMinIndex(VOID)
     return RISE_WATCH_DAYS;
 }
 
+VOID RISE_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList)
+{
+    return;
+}
+
 BOOL_T RISE_Statistics(IN FILE_WHOLE_DATA_S *pstSettleData)
 {
     ULONG i;

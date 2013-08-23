@@ -82,8 +82,9 @@ typedef struct tagStockCtrl
     ULONG  ulCode;
     BOOL_T bIsHold;
     BOOL_T bIsWish;
-    ULONG  ulHoldCnt;
     ULONG  ulWishPrice;
+    ULONG  ulHoldCnt;
+    ULONG  ulCurrPrice;
     ULONG  ulGainPrice;
     ULONG  ulLossPrice;
     ULONG  ulBuyDate;

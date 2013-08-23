@@ -2,11 +2,21 @@
 #include "common/file.h"
 #include "method/method.h"
 
+#define SIM_HAND_LIMIT      (10000000)  //10000 RMB per hand
+
+typedef struct tagCapLine
+{
+    ULONG ulDate;
+    ULONG ulCapital;
+}SIM_CAP_LINE_S;
+
 typedef struct tagDealInfo
 {
+    SIM_CAP_LINE_S *astCapLine;
     FLOAT fTotalProfit;
     FLOAT fMaxProfit;
     FLOAT fMinProfit;
+    ULONG ulFreeCap;
     ULONG ulTotalDeal;
     ULONG ulGainP1;     //  0%  <  profit <=    1%
     ULONG ulGainP3;     //  1%  <  profit <=    3%
@@ -20,11 +30,20 @@ typedef struct tagDealInfo
     ULONG ulLossMore;   //         profit <=  -10%
 }SIM_DEAL_INFO_S;
 
+typedef struct tagStockData
+{
+    ULONG ulEntryCnt;
+    STOCK_CTRL_S       stStockCtrl;
+    FILE_WHOLE_DATA_S *pstCurrData;
+    FILE_WHOLE_DATA_S *astWholeData;
+}SIM_STOCK_DATA_S;
+
 GetGainPrice_PF g_pfGetGainPrice = NULL;
 GetLossPrice_PF g_pfGetLossPrice = NULL;
 GetBuyPrice_PF  g_pfGetBuyPrice  = NULL;
 GetSellPrice_PF g_pfGetSellPrice = NULL;
 Choose_PF       g_pfDailyChoose  = NULL;
+SortWishList_PF g_pfSortWishList = NULL;
 
 VOID SIM_PrintDealInfo(IN SIM_DEAL_INFO_S *pstDealInfo)
 {
@@ -52,6 +71,17 @@ VOID SIM_PrintDealInfo(IN SIM_DEAL_INFO_S *pstDealInfo)
            pstDealInfo->ulGainP3/fTotalDeal,    pstDealInfo->ulGainP5/fTotalDeal, 
            pstDealInfo->ulGainP10/fTotalDeal,   pstDealInfo->ulGainMore/fTotalDeal);
 
+    return;
+}
+
+VOID SIM_PrintCapInfo(IN ULONG ulDays, IN SIM_DEAL_INFO_S *pstDealInfo)
+{
+    ULONG i;
+    SIM_CAP_LINE_S *pstCurr=pstDealInfo->astCapLine;
+
+    for (i=0;i<ulDays;i++,pstCurr++) {
+        printf("%u,%.2f\n", pstCurr->ulDate, FILE_PRICE2REAL(pstCurr->ulCapital));
+    }
     return;
 }
 
@@ -98,14 +128,18 @@ VOID SIM_SetDealInfo(IN FLOAT fProfit, OUT SIM_DEAL_INFO_S *pstDealInfo)
 FLOAT SIM_GetProfit(IN FILE_WHOLE_DATA_S *pstCurrData, IN STOCK_CTRL_S *pstStockCtrl)
 {
     FLOAT fMulti, fAdder, fProfit;
+    FLOAT fHighRate, fLowRate;
 
     GetFactor(pstStockCtrl->ulBuyDate, pstCurrData, &fMulti, &fAdder);
 
     // take off deal cost 0.3%
     fProfit = ((pstStockCtrl->ulSellPrice * fMulti) + fAdder)/pstStockCtrl->ulBuyPrice - 1.003F;
+    fHighRate = (((FLOAT)pstStockCtrl->ulHoldHigh)/pstStockCtrl->ulBuyPrice) - 1.00F;
+    fLowRate  = (((FLOAT)pstStockCtrl->ulHoldLow )/pstStockCtrl->ulBuyPrice) - 1.00F;
 
-    printf("%06u,%u,%u,%u,%u,%.3f\n",
+    printf("%06u,%u,%u,%u,%.3f,%u,%.3f,%u,%u,%.3f\n",
         pstStockCtrl->ulCode, pstStockCtrl->ulBuyDate, pstStockCtrl->ulBuyPrice, 
+        pstStockCtrl->ulHoldHigh, fHighRate, pstStockCtrl->ulHoldLow, fLowRate,
         pstStockCtrl->ulSellDate, pstStockCtrl->ulSellPrice, fProfit);
 
     return fProfit;
@@ -153,14 +187,20 @@ ULONG SIM_GetSellPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN STOCK_CTRL_S *pstSt
     return ulSellPrice;
 }
 
-BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
+BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, 
+                      INOUT STOCK_CTRL_S *pstStockCtrl, 
+                      INOUT SIM_DEAL_INFO_S *pstDealInfo)
 {
     BOOL_T bIsSell = BOOL_FALSE;
     BOOL_T bIsHigher, bIsLower;
     ULONG  ulSellPrice;
+    FLOAT  fProfit;
 
     bIsHigher = (pstCurrData->stDailyPrice.ulHigh >= pstStockCtrl->ulGainPrice) ? BOOL_TRUE : BOOL_FALSE;
     bIsLower  = (pstCurrData->stDailyPrice.ulLow  <= pstStockCtrl->ulLossPrice) ? BOOL_TRUE : BOOL_FALSE;
+    pstStockCtrl->ulHoldHigh = MAX(pstStockCtrl->ulHoldHigh, pstCurrData->stDailyPrice.ulHigh);
+    pstStockCtrl->ulHoldLow  = MIN(pstStockCtrl->ulHoldLow,  pstCurrData->stDailyPrice.ulLow);
+    pstStockCtrl->ulCurrPrice = pstCurrData->stDailyPrice.ulEnd;
 
     if (BOOL_FALSE != bIsHigher) {
         if (BOOL_FALSE == bIsLower) {   // only reach win price
@@ -196,10 +236,15 @@ BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
     }
 
     if (INVAILD_ULONG != ulSellPrice) {
+        // sell stock
         pstStockCtrl->ulSellDate  = pstCurrData->ulDate;
         pstStockCtrl->ulSellPrice = ulSellPrice;
         pstStockCtrl->bIsHold     = BOOL_FALSE;
         bIsSell = BOOL_TRUE;
+
+        // record
+        fProfit = SIM_GetProfit(pstCurrData, pstStockCtrl);
+        pstDealInfo->ulFreeCap += (ULONG)((1+fProfit)*pstStockCtrl->ulHoldCnt*pstStockCtrl->ulBuyPrice);
     }
     else {      // update gain price and loss price
         pstStockCtrl->ulGainPrice = g_pfGetGainPrice(pstCurrData, pstStockCtrl);
@@ -209,20 +254,36 @@ BOOL_T SIM_HandleHold(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
     return bIsSell;
 }
 
-BOOL_T SIM_HandleWish(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
+BOOL_T SIM_HandleWish(IN FILE_WHOLE_DATA_S *pstCurrData, 
+                      INOUT STOCK_CTRL_S *pstStockCtrl, 
+                      INOUT SIM_DEAL_INFO_S *pstDealInfo)
 {
     ULONG ulBuyPrice;
+    ULONG ulBuyCnt;
+    ULONG ulTotalBuyPrice;
 
+    // clear wish
+    pstStockCtrl->bIsWish     = BOOL_FALSE;
+
+    // get buy price
     ulBuyPrice = g_pfGetBuyPrice(pstCurrData, pstStockCtrl);
-
     if (INVAILD_ULONG == ulBuyPrice) return BOOL_FALSE;
+
+    // check remain capital
+    ulBuyCnt = GetBuyCnt(SIM_HAND_LIMIT, ulBuyPrice);
+    ulTotalBuyPrice=ulBuyCnt*ulBuyPrice;
+    if (pstDealInfo->ulFreeCap < ulTotalBuyPrice) return BOOL_FALSE;
+    pstDealInfo->ulFreeCap-=ulTotalBuyPrice;
 
     pstStockCtrl->ulBuyDate   = pstCurrData->ulDate;
     pstStockCtrl->ulBuyPrice  = ulBuyPrice;
+    pstStockCtrl->ulHoldCnt   = ulBuyCnt;
+    pstStockCtrl->ulCurrPrice = pstCurrData->stDailyPrice.ulEnd;
     pstStockCtrl->ulGainPrice = g_pfGetGainPrice(pstCurrData, pstStockCtrl);
     pstStockCtrl->ulLossPrice = g_pfGetLossPrice(pstCurrData, pstStockCtrl);
-    pstStockCtrl->bIsWish     = BOOL_FALSE;
     pstStockCtrl->bIsHold     = BOOL_TRUE;
+    pstStockCtrl->ulHoldHigh  = pstCurrData->stDailyPrice.ulHigh;
+    pstStockCtrl->ulHoldLow   = pstCurrData->stDailyPrice.ulLow;
 
     return BOOL_TRUE;
 }
@@ -241,33 +302,37 @@ VOID SIM_GetMethod(IN CHAR *szMethod)
     g_pfGetBuyPrice  = stMethodFunc.pfGetBuyPrice; 
     g_pfGetSellPrice = stMethodFunc.pfGetSellPrice;
     g_pfDailyChoose  = stMethodFunc.pfDailyChoose;
+    g_pfSortWishList = stMethodFunc.pfSortWishList;
 
     return;
 }
 
 int main(int argc,char *argv[])
 {
-    ULONG i, ulCodeCnt;
+    ULONG i, j, ulCodeCnt;
     ULONG ulIndex;
-    BOOL_T bIsSell, bIsBuy;
-    FLOAT fProfit;
     ULONG ulShareCnt=0;
     ULONG ulShareMax=0;
-    ULONG ulTotalShare;
+    FLOAT fCapital;
+    ULONG ulHoldCapital=0;
+    SIM_CAP_LINE_S *pstCapLine;
     SIM_DEAL_INFO_S stDealInfo;
-    ULONG ulBeginDate, ulEndDate, ulCurrDate;
+    ULONG ulBeginDate, ulEndDate, ulCurrDate, ulDayCnt, ulActualDayCnt=0;
+    ULONG ulNextDate=INVAILD_ULONG;
+    ULONG ulTempDate=INVAILD_ULONG;
+    ULONG ulWishCnt=0;
+    ULONG aulWishCodeList[STOCK_TOTAL_CNT];
+    ULONG ulHoldCnt=0;
     ULONG *pulCodeList = NULL;
     CHOOSE_PRE_DEAL_S stWish;
     STOCK_CTRL_S *pstStockCtrl = NULL;
-    STOCK_CTRL_S *astStockCtrl = NULL;
-    ULONG aulEntryCnt[STOCK_TOTAL_CNT];
-    FILE_WHOLE_DATA_S *pstCurrData;
-    FILE_WHOLE_DATA_S *apstCurrData[STOCK_TOTAL_CNT];
-    FILE_WHOLE_DATA_S *apstWholeData[STOCK_TOTAL_CNT];
+    SIM_STOCK_DATA_S *pstStockData = NULL;
+    SIM_STOCK_DATA_S *astStockData = NULL;
+    FILE_WHOLE_DATA_S *pstCurrData = NULL;
     
     //check parameter
     if ((argc < 7) || (argc > 8)) {
-        printf("USAGE: %s method path begin-date end-date share-cnt { code | all } [debug]", argv[0]);
+        printf("USAGE: %s method path begin-date end-date capital { code | all } [debug]", argv[0]);
         exit(1);
     }
     SIM_GetMethod(argv[1]);
@@ -276,91 +341,141 @@ int main(int argc,char *argv[])
 
     if (0 == _stricmp(argv[argc-1], "debug"))
         g_bIsDebugMode = BOOL_TRUE;
-    
+
+    /* init parameter */
     ulCodeCnt = GetCodeList(argv[6], &pulCodeList);
     ulBeginDate = (ULONG)atol(argv[3]);
     ulEndDate = (ULONG)atol(argv[4]);
-    ulTotalShare = (ULONG)atol(argv[5]);
+    fCapital = (FLOAT)atol(argv[5]);
     assert(ulBeginDate <= ulEndDate);
     assert(ulCodeCnt < STOCK_TOTAL_CNT);
     memset(&stDealInfo, 0, sizeof(stDealInfo));
+    stDealInfo.ulFreeCap=FILE_REAL2PRICE(fCapital);
+    ulDayCnt = GetDateInterval(ulBeginDate, ulEndDate);
 
-    astStockCtrl = (STOCK_CTRL_S *)malloc(sizeof(STOCK_CTRL_S) * ulCodeCnt);
-    assert(NULL != astStockCtrl);
-    memset(astStockCtrl, 0, sizeof(STOCK_CTRL_S) * ulCodeCnt);
+    //astStockCtrl = (STOCK_CTRL_S *)malloc(sizeof(STOCK_CTRL_S) * ulCodeCnt);
+    //assert(NULL != astStockCtrl);
+    //memset(astStockCtrl, 0, sizeof(STOCK_CTRL_S) * ulCodeCnt);
+
+    stDealInfo.astCapLine = (SIM_CAP_LINE_S *)malloc(sizeof(SIM_CAP_LINE_S) * ulDayCnt);
+    assert(NULL != stDealInfo.astCapLine);
+    memset(stDealInfo.astCapLine, 0, sizeof(SIM_CAP_LINE_S) * ulDayCnt);
+    pstCapLine=stDealInfo.astCapLine;
+
+    astStockData = (SIM_STOCK_DATA_S *)malloc(sizeof(SIM_STOCK_DATA_S) * ulCodeCnt);
+    assert(NULL != astStockData);
+    memset(astStockData, 0, sizeof(SIM_STOCK_DATA_S) * ulCodeCnt);
 
     // get all data
-    memset(aulEntryCnt, 0, sizeof(aulEntryCnt));
     for (i=0;i<ulCodeCnt;i++) {
-        aulEntryCnt[i] = FILE_GetFileData(pulCodeList[i], argv[2], FILE_TYPE_CUSTOM, &apstWholeData[i]);
-        if (0 == aulEntryCnt[i]) {
-            free(astStockCtrl);
-            return;
-        }
-        astStockCtrl[i].ulCode = pulCodeList[i];
+        pstStockData = &(astStockData[i]);
+        pstStockData->ulEntryCnt = FILE_GetFileData(pulCodeList[i], argv[2], FILE_TYPE_CUSTOM, &(pstStockData->astWholeData));
+        assert (0 != pstStockData->ulEntryCnt);
+        
+        astStockData[i].stStockCtrl.ulCode = pulCodeList[i];
     }
 
     // get start point
     for (i=0;i<ulCodeCnt;i++) {
-        ulIndex = GetIndexByDate(ulBeginDate,INDEX_NEXT,aulEntryCnt[i],apstWholeData[i]);
+        pstStockData = &(astStockData[i]);
+        ulIndex = GetIndexByDate(ulBeginDate,INDEX_NEXT,pstStockData->ulEntryCnt,pstStockData->astWholeData);
         if (INVAILD_ULONG == ulIndex) {
-            apstCurrData[i] = NULL;
+            pstStockData->pstCurrData = NULL;
         }
         else {
-            apstCurrData[i] = &apstWholeData[i][ulIndex];
+            pstStockData->pstCurrData = &(pstStockData->astWholeData[ulIndex]);
+            ulNextDate=MIN(pstStockData->pstCurrData->ulDate, ulNextDate);
         }
     }
 
     //step by date
     for (ulCurrDate=ulBeginDate; ulCurrDate<=ulEndDate; ulCurrDate++) {
-        if (BOOL_FALSE == IsVaildDate(ulCurrDate)) continue;
+        if (ulCurrDate!=ulNextDate) continue;
+        ulActualDayCnt++;
 
         // in each day, check every stock
-        for (i=0;i<ulCodeCnt;i++) {
-            if (NULL == apstCurrData[i]) continue;
-            if (ulCurrDate != apstCurrData[i]->ulDate) continue;
+        for (i=0;i<ulCodeCnt;i++) {     // check hold
+            pstStockData = &(astStockData[i]);
+            pstStockCtrl = &(pstStockData->stStockCtrl);
+            if (BOOL_FALSE == pstStockCtrl->bIsHold) continue;
+            if (NULL == pstStockData->pstCurrData) continue;
+            if (ulCurrDate != pstStockData->pstCurrData->ulDate) continue;
 
-            pstCurrData  = apstCurrData[i];
-            pstStockCtrl = &astStockCtrl[i];
-            if (BOOL_FALSE != pstStockCtrl->bIsHold) {
-                // handle hold
-                bIsSell = SIM_HandleHold(pstCurrData, pstStockCtrl);
-                if (BOOL_FALSE != bIsSell) {
-                    // stock sold
-                    fProfit = SIM_GetProfit(pstCurrData, pstStockCtrl);
-                    SIM_SetDealInfo(fProfit, &stDealInfo);
-                    ulShareCnt--;
-                }
+            SIM_HandleHold(pstStockData->pstCurrData, pstStockCtrl, &stDealInfo);
+
+            // update capital still hold
+            if (BOOL_FALSE != pstStockCtrl->bIsHold)
+                ulHoldCapital += pstStockCtrl->ulHoldCnt * pstStockCtrl->ulCurrPrice;
+        }
+
+        for (i=0;i<ulWishCnt;i++) {     // check wish
+            // search wish code
+            ULONG ulStockCode = aulWishCodeList[i];
+            for (j=0;j<ulCodeCnt;j++) {
+                if (ulStockCode == astStockData[j].stStockCtrl.ulCode) break;
             }
+            assert(j!=ulCodeCnt);
 
-            if (BOOL_FALSE != pstStockCtrl->bIsWish) {
-                // handle Wish
-                pstStockCtrl->bIsWish = BOOL_FALSE;
-                if (ulShareCnt < ulTotalShare) {
-                    bIsBuy = SIM_HandleWish(pstCurrData, pstStockCtrl);
-                    if (BOOL_FALSE != bIsBuy) ulShareCnt++;
-                    ulShareMax=MAX(ulShareCnt, ulShareMax);
-                }
-            }
+            // handle wish list
+            pstStockData = &(astStockData[j]);
+            pstStockCtrl = &(pstStockData->stStockCtrl);
+            assert(BOOL_TRUE == pstStockData->stStockCtrl.bIsWish);
+            if (NULL == pstStockData->pstCurrData) continue;
+            if (ulCurrDate != pstStockData->pstCurrData->ulDate) continue;
 
-            // get wishlist
-            if ((BOOL_FALSE == pstStockCtrl->bIsHold) &&
-                (BOOL_FALSE != g_pfDailyChoose(apstCurrData[i]-apstWholeData[i], apstCurrData[i], &stWish))) {
+            SIM_HandleWish(pstStockData->pstCurrData, pstStockCtrl, &stDealInfo);
+
+            // update capital still hold
+            if (BOOL_FALSE != pstStockCtrl->bIsHold)
+                ulHoldCapital += pstStockCtrl->ulHoldCnt * pstStockCtrl->ulCurrPrice;
+        }
+
+        // update capital
+        pstCapLine->ulDate=ulCurrDate;
+        pstCapLine->ulCapital=ulHoldCapital+stDealInfo.ulFreeCap;
+        pstCapLine++;
+        ulWishCnt=0;
+        ulHoldCapital=0;
+
+        for (i=0;i<ulCodeCnt;i++) {     // get wishlist
+            pstStockData = &(astStockData[i]);
+            pstStockCtrl = &(pstStockData->stStockCtrl);
+            if (NULL == pstStockData->pstCurrData) continue;
+            if (ulCurrDate != pstStockData->pstCurrData->ulDate) continue;
+            if (BOOL_FALSE != pstStockCtrl->bIsHold) continue;
+            
+            if (BOOL_FALSE != g_pfDailyChoose(pstStockData->pstCurrData-pstStockData->astWholeData, 
+                                              pstStockData->pstCurrData, &stWish))
+            {
                 pstStockCtrl->bIsWish     = BOOL_TRUE;
                 pstStockCtrl->ulWishPrice = FILE_REAL2PRICE(stWish.fThresholdPrice);
+                aulWishCodeList[ulWishCnt] = pstStockCtrl->ulCode;
+                ulWishCnt++;
             }
-            
-            apstCurrData[i]++;
         }
+
+        g_pfSortWishList(ulWishCnt, aulWishCodeList);   // sort wishlist
+        
+        for (i=0;i<ulCodeCnt;i++) {     // shift data
+            pstStockData = &(astStockData[i]);
+            if (NULL == pstStockData->pstCurrData) continue;
+            if (pstStockData->pstCurrData->ulDate==ulCurrDate) pstStockData->pstCurrData++;
+            if (0==pstStockData->pstCurrData->ulDate) continue;
+            ulTempDate=MIN(pstStockData->pstCurrData->ulDate, ulTempDate);
+        }
+        ulNextDate=ulTempDate;
+        ulTempDate=INVAILD_ULONG;
     }
 
     for (i=0;i<ulCodeCnt;i++) {
-        if (0 != aulEntryCnt[i]) free(apstWholeData[i]);
+        if (0 != astStockData[i].ulEntryCnt) free(astStockData[i].astWholeData);
     }
-    free(astStockCtrl);
+    free(astStockData);
 
-    printf("\nshare max=%d, effective profit=%.2f%%\n", ulShareMax,stDealInfo.fTotalProfit*100/ulShareMax);
+    SIM_PrintCapInfo(ulActualDayCnt, &stDealInfo);
     SIM_PrintDealInfo(&stDealInfo);
+    free(stDealInfo.astCapLine);
+    
     return 0;
 }
 

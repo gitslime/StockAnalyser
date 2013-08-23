@@ -67,6 +67,36 @@ ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulFlag, IN ULONG ulEntryCnt, IN F
     return ((ULONG)iMid >= ulEntryCnt) ? INVAILD_ULONG : (ULONG)iMid;
 }
 
+ULONG GetIndexByCode(IN ULONG ulCode, IN ULONG ulEntryCnt, IN STOCK_CTRL_S *pstStockCtrl)
+{
+    int iBegin, iEnd, iMid;         //flag maybe nagative
+    STOCK_CTRL_S *pstMidEntry = pstStockCtrl;    
+
+    iBegin=0;
+    iEnd=ulEntryCnt-1;
+    while (1) {
+        iMid=(iBegin+iEnd)>>1;           //get middle point (>>1)=(/2)
+        pstMidEntry = pstStockCtrl + iMid;
+
+        if (ulCode == pstMidEntry->ulCode) break;
+
+        if (ulCode < pstMidEntry->ulCode) {
+            iEnd = iMid-1;
+        }
+        else {
+            iBegin = iMid+1;
+        }
+
+        if (iBegin>iEnd) {
+            iMid = INVAILD_ULONG;
+            break;
+        }
+    }
+
+    return (ULONG)iMid;
+}
+
+
 ULONG GetCurrentDate(VOID)
 {
     time_t RawTime; 
@@ -105,6 +135,11 @@ ULONG GetDayto1904(IN ULONG ulDate)
     return ulDayCnt;
 }
 
+ULONG GetWeekDay(IN ULONG ulDate)
+{
+    // 19040101 is friday, skip week end
+    return ((GetDayto1904(ulDate)+4)%7)+1;
+}
 
 ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate)
 {
@@ -116,20 +151,18 @@ ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate)
 BOOL_T IsVaildDate(IN ULONG ulDate)
 {
     ULONG ulYear, ulMon, ulDay;
-    ULONG ulDateEachMon[13]={0,31,29,31,30,31,30,31,31,30,31,30,31};
+    ULONG ulCheckDate=ulDate;
+    ULONG ulDateEachMon[13]={0,31,28,31,30,31,30,31,31,30,31,30,31};
     
     DATE_BREAKDOWN(ulDate,ulYear,ulMon,ulDay);
 
     if ((ulYear < 1990) || (ulYear > 2050)) return BOOL_FALSE;
     if ((ulMon < 1) || (ulMon > 12)) return BOOL_FALSE;
+    if ((2==ulMon) && (29==ulDay) && (0==(ulYear&0x03))) return BOOL_TRUE;  // check leap year
     if ((ulDay < 1) || (ulDay > ulDateEachMon[ulMon])) return BOOL_FALSE;
-
+    
     return BOOL_TRUE;
 }
-
-
-
-
 
 VOID RandomInit(VOID)
 {
