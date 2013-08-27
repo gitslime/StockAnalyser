@@ -6,7 +6,7 @@
     extern BOOL_T METHOD##_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo); \
     extern ULONG METHOD##_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
     extern ULONG METHOD##_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
-    extern ULONG METHOD##_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl);  \
+    extern ULONG METHOD##_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN ULONG ulWishPrice);  \
     extern ULONG METHOD##_GetSellPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
     extern ULONG METHOD##_GetMinIndex(VOID); \
     extern VOID METHOD##_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList);

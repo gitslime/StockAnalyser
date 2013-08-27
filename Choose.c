@@ -30,8 +30,6 @@ VOID CHOOSE_Track(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ul
 
     // fill stock ctrl
     memset(&stStockCtrl, 0, sizeof(stStockCtrl));
-    stStockCtrl.ulCode = ulCode;
-    stStockCtrl.bIsHold = BOOL_TRUE;
     stStockCtrl.ulBuyDate = ulDate;
     stStockCtrl.ulGainPrice = stMethodFunc.pfGetGainPrice(pstLatestData, &stStockCtrl);
     stStockCtrl.ulLossPrice = stMethodFunc.pfGetLossPrice(pstLatestData, &stStockCtrl);

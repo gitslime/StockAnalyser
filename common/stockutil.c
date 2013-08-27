@@ -111,8 +111,9 @@ FLOAT GetVolRatio(IN FILE_WHOLE_DATA_S *pstData)
 ULONG GetBuyCnt(IN ULONG ulHandLimit, IN ULONG ulBuyPrice)
 {
     ULONG ulHand=ulHandLimit/ulBuyPrice/100;
+    ULONG ulBuyCap=(ulHand*ulBuyPrice*100);
 
-    if ((ulHand*ulBuyPrice*100)<(ulHandLimit*0.9)) return 0;
+    if ((ulBuyCap<(ulHandLimit*0.9)) || (ulBuyCap>(ulHandLimit*1.1))) return 0;
 
     return ulHand*100;
 }

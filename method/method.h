@@ -3,7 +3,7 @@
 
 typedef ULONG (*GetGainPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
 typedef ULONG (*GetLossPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
-typedef ULONG (*GetBuyPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
+typedef ULONG (*GetBuyPrice_PF)(IN FILE_WHOLE_DATA_S *, IN ULONG);
 typedef ULONG (*GetSellPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
 typedef BOOL_T (*Choose_PF)(IN ULONG, IN FILE_WHOLE_DATA_S *, OUT CHOOSE_PRE_DEAL_S *);
 typedef BOOL_T (*Statistics_PF)(IN FILE_WHOLE_DATA_S *);

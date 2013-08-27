@@ -79,18 +79,11 @@ typedef struct tagPreDealInfo
 
 typedef struct tagStockCtrl
 {
-    ULONG  ulCode;
-    BOOL_T bIsHold;
-    BOOL_T bIsWish;
-    ULONG  ulWishPrice;
-    ULONG  ulHoldCnt;
-    ULONG  ulCurrPrice;
+    //ULONG  ulWishPrice;
     ULONG  ulGainPrice;
     ULONG  ulLossPrice;
     ULONG  ulBuyDate;
     ULONG  ulBuyPrice;
-    ULONG  ulHoldHigh;
-    ULONG  ulHoldLow;
     ULONG  ulSellDate;
     ULONG  ulSellPrice;
 }STOCK_CTRL_S;
@@ -169,6 +162,15 @@ ULONG GetBuyCnt(IN ULONG ulHandLimit, IN ULONG ulBuyPrice);
 #define CANDLE_TYPE_LARGE_LOSS          (18UL)
 #define CANDLE_TYPE_LARGE_GAIN          (19UL)
 ULONG GetCandleType(IN FILE_WHOLE_DATA_S *pstData);
+
+// single link list
+typedef struct tagSllNode{
+    VOID *pNext;
+}SLL_NODE_S;
+
+VOID SLL_InsertInTail(IN SLL_NODE_S *pstHead, IN SLL_NODE_S *pstNode);
+VOID SLL_DeleteNode(IN SLL_NODE_S *pstHead, IN SLL_NODE_S *pstNode);
+VOID SLL_FreeAll(IN SLL_NODE_S *pstHead);
 
 #endif
 

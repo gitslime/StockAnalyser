@@ -103,7 +103,7 @@ VOID SMA_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList)
 #define SMA_LOSS_THRESHOLD      (0.883F)
 #define SMA_LOSS_STEP           (0.020F)
 
-ULONG SMA_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
+ULONG SMA_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN STOCK_CTRL_S *pstStockCtrl)
 {
     ULONG i, ulHoldDays=0;
     ULONG ulPrevMa, ulCurrMa;
@@ -121,7 +121,7 @@ ULONG SMA_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
     }
 
     // set buy price
-    if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
+    //if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
 
     // get times of price below ma
     for(i=0,ulPrevMa=INVAILD_ULONG,ulBelowCnt=0;i<ulHoldDays;i++,pstData++) {
@@ -138,7 +138,7 @@ ULONG SMA_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
     return (ULONG)(ulCurrMa * (SMA_GAIN_THRESHOLD-(ulBelowCnt*SMA_GAIN_STEP)));
 }
 
-ULONG SMA_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
+ULONG SMA_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN STOCK_CTRL_S *pstStockCtrl)
 {
     ULONG i, ulHoldDays=0;
     ULONG ulPrevMa, ulCurrMa;
@@ -157,7 +157,7 @@ ULONG SMA_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
     }
 
     // set buy price. it is used for track hold stocks.
-    if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
+    //if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
 
     // get low point before buy
     for (i=SMA_MEAN_DAYS,ulPrevLow=pstData->stDailyPrice.ulLow;i>0;i--,pstData--) {
@@ -180,7 +180,7 @@ ULONG SMA_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
     return MAX(ulPrevLow,ulMaDrift);
 }
 
-ULONG SMA_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
+ULONG SMA_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN ULONG ulWishPrice)
 {
     FLOAT fRise;
 
@@ -192,7 +192,7 @@ ULONG SMA_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pst
     // this check is for ST
     if ((pstCurrData->stDailyPrice.ulBegin == pstCurrData->stDailyPrice.ulEnd) &&
         (pstCurrData->stDailyPrice.ulHigh  == pstCurrData->stDailyPrice.ulLow)) return INVAILD_ULONG;
-    if (pstCurrData->stDailyPrice.ulEnd < pstStockCtrl->ulWishPrice) return INVAILD_ULONG;
+    if (pstCurrData->stDailyPrice.ulEnd < ulWishPrice) return INVAILD_ULONG;
 
     return pstCurrData->stDailyPrice.ulEnd;
 }

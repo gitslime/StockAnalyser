@@ -67,36 +67,6 @@ ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulFlag, IN ULONG ulEntryCnt, IN F
     return ((ULONG)iMid >= ulEntryCnt) ? INVAILD_ULONG : (ULONG)iMid;
 }
 
-ULONG GetIndexByCode(IN ULONG ulCode, IN ULONG ulEntryCnt, IN STOCK_CTRL_S *pstStockCtrl)
-{
-    int iBegin, iEnd, iMid;         //flag maybe nagative
-    STOCK_CTRL_S *pstMidEntry = pstStockCtrl;    
-
-    iBegin=0;
-    iEnd=ulEntryCnt-1;
-    while (1) {
-        iMid=(iBegin+iEnd)>>1;           //get middle point (>>1)=(/2)
-        pstMidEntry = pstStockCtrl + iMid;
-
-        if (ulCode == pstMidEntry->ulCode) break;
-
-        if (ulCode < pstMidEntry->ulCode) {
-            iEnd = iMid-1;
-        }
-        else {
-            iBegin = iMid+1;
-        }
-
-        if (iBegin>iEnd) {
-            iMid = INVAILD_ULONG;
-            break;
-        }
-    }
-
-    return (ULONG)iMid;
-}
-
-
 ULONG GetCurrentDate(VOID)
 {
     time_t RawTime; 
@@ -186,8 +156,53 @@ FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax)
     return (FLOAT)(rand()/(double)(RAND_MAX))*(fMax-fMin)+fMin;
 }
 
+VOID SLL_InsertInTail(IN SLL_NODE_S *pstHead, IN SLL_NODE_S *pstNode)
+{
+    SLL_NODE_S *pstCurr=pstHead;
 
+    // find the tail
+    while (NULL != pstCurr->pNext) {
+        pstCurr=pstCurr->pNext;
+    }
 
+    // insert node
+    pstCurr->pNext=pstNode;
+    pstNode->pNext=NULL;
+
+    return;
+}
+
+VOID SLL_DeleteNode(IN SLL_NODE_S *pstHead, IN SLL_NODE_S *pstNode)
+{
+    SLL_NODE_S *pstCurr=pstHead;
+
+    // find the node
+    while (pstNode != pstCurr->pNext) {
+        if (NULL == pstCurr->pNext) return; // not found
+        
+        pstCurr=pstCurr->pNext;
+    }
+
+    // delete node
+    pstCurr->pNext=pstNode->pNext;
+
+    return;
+}
+
+VOID SLL_FreeAll(IN SLL_NODE_S *pstHead)
+{
+    SLL_NODE_S *pstCurr = pstHead->pNext;
+    SLL_NODE_S *pstNext;
+
+    while (NULL != pstCurr) {
+        pstNext = pstCurr->pNext;
+        free(pstCurr);
+        pstCurr=pstNext;
+    }
+    pstHead->pNext=NULL;
+
+    return;
+}
 
 
 

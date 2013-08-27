@@ -142,7 +142,7 @@ ULONG RISE_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *p
     return (ULONG)(pstData->stDailyPrice.ulEnd * RISE_LOSS_THRESHOLD);
 }
 
-ULONG RISE_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl)
+ULONG RISE_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN ULONG ulWishPrice)
 {
     FLOAT fRise;
 
@@ -154,7 +154,7 @@ ULONG RISE_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *ps
     // this check is for ST
     if ((pstCurrData->stDailyPrice.ulBegin == pstCurrData->stDailyPrice.ulEnd) &&
         (pstCurrData->stDailyPrice.ulHigh  == pstCurrData->stDailyPrice.ulLow)) return INVAILD_ULONG;
-    if (pstCurrData->stDailyPrice.ulEnd < pstStockCtrl->ulWishPrice) return INVAILD_ULONG;
+    if (pstCurrData->stDailyPrice.ulEnd < ulWishPrice) return INVAILD_ULONG;
 
     return pstCurrData->stDailyPrice.ulEnd;
 }
