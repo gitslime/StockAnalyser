@@ -8,18 +8,33 @@
 #define SIM_TAX_RATE        (0.0010F)
 #define SIM_SLIP_RATE       (0.0050F)
 
+typedef struct tagCmdOption
+{
+    CHAR *szMethod;
+    CHAR *szDataPath;
+    ULONG ulBeginDate;
+    ULONG ulEndDate;
+    ULONG ulTotalCap;
+    CHAR *szStock;
+    BOOL_T bIsDebug;
+    BOOL_T bIsVerbose;
+    CHAR *szParam;
+}SIM_OPTION_S;
+
 // for record
 typedef struct tagCapLine
 {
     ULONG ulDate;
     ULONG ulCapital;
     ULONG ulStockCnt;
+    ULONG ulWishCnt;
 }SIM_CAP_LINE_S;
 
 // for summary
 typedef struct tagSummaryInfo
 {
     ULONG ulTotalDealCnt;
+    ULONG ulWinDealCnt;
     FLOAT fTotalProfit;
     FLOAT fDealProfitSum;
     FLOAT fMaxDealProfit;
@@ -58,27 +73,21 @@ typedef struct tagAccountInfo
     SIM_WISH_LIST_S astWishList[SIM_MAX_WISH_CNT];
 }SIM_ACCOUNT_S;
 
-typedef struct tagStockData
-{
-    ULONG ulStockCode;
-    ULONG ulEntryCnt;
-    BOOL_T bIsHold;     // for get wish list to skip hold stocks
-    FILE_WHOLE_DATA_S *pstCurrData;
-    FILE_WHOLE_DATA_S *astWholeData;
-}SIM_STOCK_DATA_S;
-
 GetGainPrice_PF g_pfGetGainPrice = NULL;
 GetLossPrice_PF g_pfGetLossPrice = NULL;
 GetBuyPrice_PF  g_pfGetBuyPrice  = NULL;
 GetSellPrice_PF g_pfGetSellPrice = NULL;
 Choose_PF       g_pfDailyChoose  = NULL;
 SortWishList_PF g_pfSortWishList = NULL;
+SetParam_PF     g_pfSetParam     = NULL;
+
 SIM_SUMMARY_S g_stSimSummary;
 
 VOID SIM_PrintSummary(IN SIM_SUMMARY_S *pstSummary)
 {
-    printf("%u,%.5f,%.5f,%.5f,%.5f,%.2f,%.4f\n",
+    printf("%u,%.4f,%.4f,%.5f,%.4f,%.4f,%.2f,%.4f\n",
            pstSummary->ulTotalDealCnt, pstSummary->fTotalProfit, 
+           (FLOAT)pstSummary->ulWinDealCnt/pstSummary->ulTotalDealCnt,
            pstSummary->fDealProfitSum/pstSummary->ulTotalDealCnt,
            pstSummary->fMaxDealProfit, pstSummary->fMinDealProfit,
            FILE_PRICE2REAL(pstSummary->ulMaxCapital), pstSummary->fMaxCapWithdraw);
@@ -92,7 +101,8 @@ VOID SIM_PrintCapInfo(IN ULONG ulDays, IN SIM_CAP_LINE_S *pstCapLine)
     SIM_CAP_LINE_S *pstCurr=pstCapLine;
 
     for (i=0;i<ulDays;i++,pstCurr++) {
-        printf("%u,%.2f,%u\n", pstCurr->ulDate, FILE_PRICE2REAL(pstCurr->ulCapital), pstCurr->ulStockCnt);
+        printf("%u,%.2f,%u,%u\n", 
+            pstCurr->ulDate, FILE_PRICE2REAL(pstCurr->ulCapital), pstCurr->ulStockCnt, pstCurr->ulWishCnt);
     }
     return;
 }
@@ -117,9 +127,11 @@ VOID SIM_RecordOneDeal(IN SIM_HOLD_LIST_S *pstDealInfo)
     FLOAT fProfit=(((FLOAT)pstDealInfo->ulSellCapital)/pstDealInfo->ulBuyCapital) - 1.00F;
 
     g_stSimSummary.ulTotalDealCnt++;
+    if (fProfit > 0) g_stSimSummary.ulWinDealCnt++;
     g_stSimSummary.fDealProfitSum+=fProfit;
     g_stSimSummary.fMaxDealProfit=MAX(g_stSimSummary.fMaxDealProfit, fProfit);
     g_stSimSummary.fMinDealProfit=MIN(g_stSimSummary.fMinDealProfit, fProfit);
+    if (fProfit>0) g_stSimSummary.ulWinDealCnt++;
 
     return;
 }
@@ -241,6 +253,7 @@ VOID SIM_UpdateCapital(IN SIM_ACCOUNT_S *pstAccount, OUT SIM_CAP_LINE_S *pstCurr
 
     pstCurrCap->ulCapital = ulHoldCap + pstAccount->ulFreeCap;
     pstCurrCap->ulStockCnt = ulStockCnt;
+    pstCurrCap->ulWishCnt = pstAccount->ulWishCnt;
 
     g_stSimSummary.ulMaxCapital=MAX(g_stSimSummary.ulMaxCapital, pstCurrCap->ulCapital);
     g_stSimSummary.fMaxCapWithdraw=MIN(g_stSimSummary.fMaxCapWithdraw, 
@@ -401,6 +414,67 @@ ULONG SIM_ShiftDate(IN ULONG ulCurrDate, IN ULONG ulCodeCnt, INOUT SIM_STOCK_DAT
     return ulNextDate;
 }
 
+ULONG SIM_GetOption(IN ULONG ulArgCnt, IN CHAR **ppcArgv, OUT SIM_OPTION_S *pstOpt)
+{
+    ULONG i, ulOptCnt;
+
+    // init option for default
+    pstOpt->szMethod    = "mma";
+    pstOpt->szDataPath  = "F:/StockAnalyser/database";
+    pstOpt->ulBeginDate = 20000101UL;
+    pstOpt->ulEndDate   = 20131231UL;
+    pstOpt->ulTotalCap  = 100000UL;
+    pstOpt->szStock     = "all";
+    pstOpt->bIsDebug    = BOOL_FALSE;
+    pstOpt->bIsVerbose  = BOOL_FALSE;
+    pstOpt->szParam     = "(13, 30)";
+
+    for (i=1,ulOptCnt=0;i<ulArgCnt;i+=2) {
+        if(ppcArgv[i][0] != '-') {
+            printf("error input\n");
+            exit(0);
+        }
+        
+        switch(ppcArgv[i][1])
+        {
+            case 'm':
+                pstOpt->szMethod = ppcArgv[i+1];
+                break;
+            case 'p':
+                pstOpt->szParam = ppcArgv[i+1];
+                break;
+            case 'd':
+                pstOpt->szDataPath = ppcArgv[i+1];
+                break;
+            case 'b':
+                pstOpt->ulBeginDate = (ULONG)atol(ppcArgv[i+1]);
+                break;
+            case 'e':
+                pstOpt->ulEndDate = (ULONG)atol(ppcArgv[i+1]);
+                break;
+            case 'c':
+                pstOpt->ulTotalCap = (ULONG)atol(ppcArgv[i+1]);
+                break;
+            case 's':
+                pstOpt->szStock = ppcArgv[i+1];
+                break;
+            case 'D':
+                pstOpt->bIsDebug = BOOL_TRUE;
+                break;
+            case 'V':
+                pstOpt->bIsVerbose = BOOL_TRUE;
+                break;
+            default:
+                printf("error input\n");
+                exit(0);
+        }
+        ulOptCnt++;
+    }
+    assert(pstOpt->ulBeginDate<pstOpt->ulEndDate);
+
+    return ulOptCnt;
+}
+
 VOID SIM_GetMethod(IN CHAR *szMethod)
 {
     ULONG ulMethod;
@@ -416,6 +490,39 @@ VOID SIM_GetMethod(IN CHAR *szMethod)
     g_pfGetSellPrice = stMethodFunc.pfGetSellPrice;
     g_pfDailyChoose  = stMethodFunc.pfDailyChoose;
     g_pfSortWishList = stMethodFunc.pfSortWishList;
+    g_pfSetParam     = stMethodFunc.pfSetParam;
+
+    return;
+}
+
+// format is (param1,param2,...)
+VOID SIM_SetParam(IN CHAR *szParam)
+{
+    ULONG ulStrLen;
+    ULONG ulParamCnt;
+    FLOAT afParam[50];
+    CHAR szSingleParam[100];
+    CHAR *p=szParam;
+
+    assert(*p == '(');
+    p++;
+
+    for (ulStrLen=0,ulParamCnt=0;*p!='\0';p++) {
+        if ((*p != ',')&&(*p!=')')) {
+            ulStrLen++;
+            continue;
+        }
+
+        memcpy(szSingleParam, p-ulStrLen,ulStrLen);
+        szSingleParam[ulStrLen]='\0';
+        afParam[ulParamCnt]=(FLOAT)atof(szSingleParam);
+        ulParamCnt++;
+        ulStrLen=0;
+    }
+
+    DebugOutString("%u,%f,%f\n", ulParamCnt, afParam[0], afParam[1]);
+
+    g_pfSetParam(ulParamCnt, afParam);
 
     return;
 }
@@ -423,37 +530,29 @@ VOID SIM_GetMethod(IN CHAR *szMethod)
 int main(int argc,char *argv[])
 {
     ULONG i, ulCodeCnt;
+    SIM_OPTION_S stOption;
     ULONG ulIndex;
     SIM_CAP_LINE_S *pstCapLine;
     SIM_CAP_LINE_S *astCapLine;
     SIM_ACCOUNT_S stAccount;
-    ULONG ulBeginDate, ulEndDate, ulCurrDate, ulDayCnt, ulActualDayCnt=0;
+    ULONG ulCurrDate, ulDayCnt, ulActualDayCnt=0;
     ULONG ulNextDate=INVAILD_ULONG;
     ULONG *pulCodeList = NULL;
     SIM_STOCK_DATA_S *pstStockData = NULL;
     SIM_STOCK_DATA_S *astStockData = NULL;
     
-    //check parameter
-    if ((argc < 7) || (argc > 8)) {
-        printf("USAGE: %s method path begin-date end-date capital { code | all } [debug]", argv[0]);
-        exit(1);
-    }
-    SIM_GetMethod(argv[1]);
-
     RandomInit();
 
-    if (0 == _stricmp(argv[argc-1], "debug"))
-        g_bIsDebugMode = BOOL_TRUE;
-
     /* init parameter */
-    ulCodeCnt = GetCodeList(argv[6], &pulCodeList);
-    ulBeginDate = (ULONG)atol(argv[3]);
-    ulEndDate = (ULONG)atol(argv[4]);
-    assert(ulBeginDate <= ulEndDate);
+    SIM_GetOption(argc, argv, &stOption);
+    g_bIsDebugMode = stOption.bIsDebug;
+    SIM_GetMethod(stOption.szMethod);
+    SIM_SetParam(stOption.szParam);
+    ulCodeCnt = GetCodeList(stOption.szStock, &pulCodeList);
     assert(ulCodeCnt < STOCK_TOTAL_CNT);
 
     // init capital line
-    ulDayCnt = GetDateInterval(ulBeginDate, ulEndDate);
+    ulDayCnt = GetDateInterval(stOption.ulBeginDate, stOption.ulEndDate);
     astCapLine = (SIM_CAP_LINE_S *)malloc(sizeof(SIM_CAP_LINE_S) * ulDayCnt);
     assert(NULL != astCapLine);
     memset(astCapLine, 0, sizeof(SIM_CAP_LINE_S) * ulDayCnt);
@@ -461,7 +560,7 @@ int main(int argc,char *argv[])
 
     // init account
     memset(&stAccount, 0, sizeof(stAccount));
-    stAccount.ulFreeCap=FILE_REAL2PRICE(atol(argv[5]));
+    stAccount.ulFreeCap=FILE_REAL2PRICE(stOption.ulTotalCap);
     stAccount.stHoldHead.pNext=NULL;
 
     // init stock data
@@ -471,11 +570,12 @@ int main(int argc,char *argv[])
 
     // get all data
     for (i=0,pstStockData=astStockData;i<ulCodeCnt;i++,pstStockData++) {
-        pstStockData->ulEntryCnt = (USHORT)FILE_GetFileData(pulCodeList[i], argv[2], FILE_TYPE_CUSTOM, &(pstStockData->astWholeData));
+        pstStockData->ulEntryCnt = FILE_GetFileData(pulCodeList[i], stOption.szDataPath, 
+                                                    FILE_TYPE_CUSTOM, &(pstStockData->astWholeData));
         assert (0 != pstStockData->ulEntryCnt);
         
         pstStockData->ulStockCode = pulCodeList[i];
-        ulIndex = GetIndexByDate(ulBeginDate,INDEX_NEXT,pstStockData->ulEntryCnt,pstStockData->astWholeData);
+        ulIndex = GetIndexByDate(stOption.ulBeginDate,INDEX_NEXT,pstStockData->ulEntryCnt,pstStockData->astWholeData);
         if (INVAILD_ULONG == ulIndex) {
             pstStockData->pstCurrData = NULL;
         }
@@ -486,7 +586,7 @@ int main(int argc,char *argv[])
     }
 
     //step by date
-    for (ulCurrDate=ulBeginDate; ulCurrDate<=ulEndDate; ulCurrDate++) {
+    for (ulCurrDate=stOption.ulBeginDate; ulCurrDate<=stOption.ulEndDate; ulCurrDate++) {
         if (ulCurrDate!=ulNextDate) continue;
         ulActualDayCnt++;
 
@@ -496,15 +596,15 @@ int main(int argc,char *argv[])
         // check wish
         SIM_HandleWishList(ulCurrDate, astStockData, &stAccount);
 
-        // update capital
-        pstCapLine->ulDate=ulCurrDate;
-        SIM_UpdateCapital(&stAccount, pstCapLine);
-        pstCapLine++;
-
         // get wish list
         stAccount.ulWishCnt = SIM_GetWishList(ulCurrDate, ulCodeCnt, astStockData, stAccount.astWishList);
 
         //g_pfSortWishList(ulWishCnt, stAccount.astWishList);   // sort wishlist
+
+        // update capital
+        pstCapLine->ulDate=ulCurrDate;
+        SIM_UpdateCapital(&stAccount, pstCapLine);
+        pstCapLine++;
 
         // shift data
         ulNextDate = SIM_ShiftDate(ulCurrDate, ulCodeCnt, astStockData);
@@ -514,7 +614,7 @@ int main(int argc,char *argv[])
 
     // print summary
     pstCapLine--;
-    g_stSimSummary.fTotalProfit=(FLOAT)pstCapLine->ulCapital/FILE_REAL2PRICE(atol(argv[5]))-1.00F;
+    g_stSimSummary.fTotalProfit=(FLOAT)pstCapLine->ulCapital/FILE_REAL2PRICE(stOption.ulTotalCap)-1.00F;
     SIM_PrintSummary(&g_stSimSummary);
 
     // free memory

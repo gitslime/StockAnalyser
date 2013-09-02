@@ -68,6 +68,15 @@ typedef struct tagWholeData
     ULONG  ulPad;
 }FILE_WHOLE_DATA_S;
 
+typedef struct tagStockData
+{
+    ULONG ulStockCode;
+    ULONG ulEntryCnt;
+    BOOL_T bIsHold;     // for get wish list to skip hold stocks
+    FILE_WHOLE_DATA_S *pstCurrData;
+    FILE_WHOLE_DATA_S *astWholeData;
+}SIM_STOCK_DATA_S;
+
 typedef struct tagPreDealInfo
 {
     BOOL_T bIsSell;     //true:sell; false:buy

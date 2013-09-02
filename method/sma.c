@@ -10,6 +10,11 @@ ULONG SMA_GetMinIndex(VOID)
     return MAX(SMA_MEAN_DAYS,SMA_CHECK_DAYS);
 }
 
+VOID SMA_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
+{
+    return;
+}
+
 #define SMA_MA_THRETHOLD        (1.000F)
 
 BOOL_T SMA_Statistics(IN FILE_WHOLE_DATA_S *pstBuyData)
@@ -92,7 +97,7 @@ BOOL_T SMA_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOS
     return BOOL_TRUE;
 }
 
-VOID SMA_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList)
+VOID SMA_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT ULONG *aulWishList)
 {
     return;
 }

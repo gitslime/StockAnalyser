@@ -9,7 +9,12 @@ ULONG RISE_GetMinIndex(VOID)
     return RISE_WATCH_DAYS;
 }
 
-VOID RISE_SortWishList(IN ULONG ulWishCnt, INOUT ULONG *aulWishList)
+VOID RISE_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
+{
+    return;
+}
+
+VOID RISE_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT ULONG *aulWishList)
 {
     return;
 }
