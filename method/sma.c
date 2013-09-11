@@ -97,7 +97,7 @@ BOOL_T SMA_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOS
     return BOOL_TRUE;
 }
 
-VOID SMA_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT ULONG *aulWishList)
+VOID SMA_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT SIM_WISH_LIST_S *astWishList)
 {
     return;
 }
@@ -124,9 +124,6 @@ ULONG SMA_GetGainPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN STOCK_CTRL_S *pstSt
         if (pstData->ulDate==pstStockCtrl->ulBuyDate) break;
         pstData--;
     }
-
-    // set buy price
-    //if (0==pstStockCtrl->ulBuyPrice) pstStockCtrl->ulBuyPrice=pstData->stDailyPrice.ulEnd;
 
     // get times of price below ma
     for(i=0,ulPrevMa=INVAILD_ULONG,ulBelowCnt=0;i<ulHoldDays;i++,pstData++) {

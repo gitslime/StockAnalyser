@@ -7,7 +7,7 @@ typedef ULONG (*GetBuyPrice_PF)(IN FILE_WHOLE_DATA_S *, IN ULONG);
 typedef ULONG (*GetSellPrice_PF)(IN FILE_WHOLE_DATA_S *, INOUT STOCK_CTRL_S *);
 typedef BOOL_T (*Choose_PF)(IN ULONG, IN FILE_WHOLE_DATA_S *, OUT CHOOSE_PRE_DEAL_S *);
 typedef BOOL_T (*Statistics_PF)(IN FILE_WHOLE_DATA_S *);
-typedef ULONG (*SortWishList_PF)(IN ULONG, IN SIM_STOCK_DATA_S *, INOUT ULONG *);
+typedef ULONG (*SortWishList_PF)(IN ULONG, IN SIM_STOCK_DATA_S *, INOUT SIM_WISH_LIST_S *);
 typedef VOID (*SetParam_PF)(IN ULONG, IN FLOAT *);
 
 typedef struct tagMethodFuncSet

@@ -3,7 +3,7 @@
 #include "method/method.h"
 
 #define SIM_HAND_LIMIT      (10000000)  //10000 RMB per hand
-#define SIM_MAX_WISH_CNT    (500)
+#define SIM_MAX_WISH_CNT    (1000)
 #define SIM_FEE_RATE        (0.0008F)
 #define SIM_TAX_RATE        (0.0010F)
 #define SIM_SLIP_RATE       (0.0050F)
@@ -33,6 +33,7 @@ typedef struct tagCapLine
 // for summary
 typedef struct tagSummaryInfo
 {
+    CHAR *szParam;
     ULONG ulTotalDealCnt;
     ULONG ulWinDealCnt;
     FLOAT fTotalProfit;
@@ -57,13 +58,6 @@ typedef struct tagHoldList
     STOCK_CTRL_S stStockCtrl;
 }SIM_HOLD_LIST_S;
 
-typedef struct tagWishList
-{
-    ULONG ulCode;
-    ULONG ulIndex;
-    ULONG ulWishPrice;
-}SIM_WISH_LIST_S;
-
 typedef struct tagAccountInfo
 {
     //SIM_CAP_LINE_S *astCapLine;
@@ -80,12 +74,13 @@ GetSellPrice_PF g_pfGetSellPrice = NULL;
 Choose_PF       g_pfDailyChoose  = NULL;
 SortWishList_PF g_pfSortWishList = NULL;
 SetParam_PF     g_pfSetParam     = NULL;
+BOOL_T          g_bIsVerbose     = BOOL_FALSE;
 
 SIM_SUMMARY_S g_stSimSummary;
 
 VOID SIM_PrintSummary(IN SIM_SUMMARY_S *pstSummary)
 {
-    printf("%u,%.4f,%.4f,%.5f,%.4f,%.4f,%.2f,%.4f\n",
+    printf("%s,%u,%.4f,%.4f,%.5f,%.4f,%.4f,%.2f,%.4f\n", pstSummary->szParam,
            pstSummary->ulTotalDealCnt, pstSummary->fTotalProfit, 
            (FLOAT)pstSummary->ulWinDealCnt/pstSummary->ulTotalDealCnt,
            pstSummary->fDealProfitSum/pstSummary->ulTotalDealCnt,
@@ -287,13 +282,14 @@ VOID SIM_HandleHoldList(IN ULONG ulCurrDate, IN SIM_STOCK_DATA_S *astStockData, 
         pstHoldStock->ulHoldLow  = MIN(pstHoldStock->ulHoldLow,  pstCurrData->stDailyPrice.ulLow);
         pstHoldStock->ulCurrPrice = pstCurrData->stDailyPrice.ulEnd;
 
+        // update factor
+        pstAccount->ulFreeCap += SIM_UpdateFactor(pstCurrData, pstHoldStock);
+
         pstStockCtrl = &(pstHoldStock->stStockCtrl);
         if (INVAILD_ULONG == ulSellPrice) {
             // still hold
             pstStockCtrl->ulGainPrice = g_pfGetGainPrice(pstCurrData, pstStockCtrl);
             pstStockCtrl->ulLossPrice = g_pfGetLossPrice(pstCurrData, pstStockCtrl);
-
-            pstAccount->ulFreeCap += SIM_UpdateFactor(pstCurrData, pstHoldStock);
         }
         else {
             // sell stock
@@ -306,7 +302,7 @@ VOID SIM_HandleHoldList(IN ULONG ulCurrDate, IN SIM_STOCK_DATA_S *astStockData, 
             pstHoldStock->ulSellCapital+=ulSellCap;
             pstAccount->ulFreeCap += ulSellCap;
             astStockData[pstHoldStock->ulIndex].bIsHold = BOOL_FALSE;
-            SIM_PrintOneDeal(pstHoldStock);
+            if (BOOL_TRUE == g_bIsVerbose) SIM_PrintOneDeal(pstHoldStock);
             SIM_RecordOneDeal(pstHoldStock);
 
             SLL_DeleteNode(&(pstAccount->stHoldHead), (SLL_NODE_S *)pstHoldStock);
@@ -328,7 +324,7 @@ VOID SIM_HandleWishList(IN ULONG ulCurrDate, IN SIM_STOCK_DATA_S *astStockData, 
     STOCK_CTRL_S *pstStockCtrl;
     SIM_HOLD_LIST_S *pstHoldStock;
 
-    assert(ulWishCnt<SIM_MAX_WISH_CNT);
+    assert(ulWishCnt<=SIM_MAX_WISH_CNT);
     
     for (i=0,pstWish=pstAccount->astWishList;i<ulWishCnt;i++,pstWish++) {
         // get data
@@ -339,7 +335,7 @@ VOID SIM_HandleWishList(IN ULONG ulCurrDate, IN SIM_STOCK_DATA_S *astStockData, 
         // get buy price
         ulBuyPrice = g_pfGetBuyPrice(pstCurrData, pstWish->ulWishPrice);
         if (INVAILD_ULONG == ulBuyPrice) continue;
-        ulBuyPrice = (ULONG)(ulBuyPrice*(1+SIM_SLIP_RATE));
+        ulBuyPrice = MIN(pstCurrData->stDailyPrice.ulHigh, (ULONG)(ulBuyPrice*(1+SIM_SLIP_RATE)));
 
         // check remain capital
         ulBuyCnt = GetBuyCnt(SIM_HAND_LIMIT, ulBuyPrice);
@@ -389,6 +385,7 @@ ULONG SIM_GetWishList(IN ULONG ulCurrDate, IN ULONG ulCodeCnt,
             pstWishStock->ulCode = pstStockData->ulStockCode;
             pstWishStock->ulIndex = i;
             pstWishStock->ulWishPrice = FILE_REAL2PRICE(stWish.fThresholdPrice);
+            pstWishStock->fWeight = stWish.fWeight;
             pstWishStock++;
             ulWishCnt++;
             if (ulWishCnt==SIM_MAX_WISH_CNT) break;
@@ -396,6 +393,27 @@ ULONG SIM_GetWishList(IN ULONG ulCurrDate, IN ULONG ulCodeCnt,
     }
 
     return ulWishCnt;
+}
+
+VOID SIM_SortWishList(IN ULONG ulStartIndex, IN ULONG ulEndIndex, INOUT SIM_WISH_LIST_S *astWishList)
+{
+    ULONG i=ulStartIndex, j=ulEndIndex;
+    FLOAT fKey = astWishList[ulStartIndex].fWeight;
+    SIM_WISH_LIST_S stTemp;
+    memcpy(&stTemp, &(astWishList[ulStartIndex]), sizeof(SIM_WISH_LIST_S));
+
+    while (i<j) {
+        while (astWishList[j].fWeight < fKey && i<j) j--;
+        if (i<j) memcpy(&(astWishList[i++]), &(astWishList[j]), sizeof(SIM_WISH_LIST_S));
+        while (astWishList[i].fWeight > fKey && i<j) i++;
+        if (i<j) memcpy(&(astWishList[j--]), &(astWishList[i]), sizeof(SIM_WISH_LIST_S));
+    }
+    memcpy(&(astWishList[i]), &stTemp, sizeof(SIM_WISH_LIST_S));
+
+    if (i > (ulStartIndex+1)) SIM_SortWishList(ulStartIndex, i-1, astWishList);
+    if (ulEndIndex > (i+1))   SIM_SortWishList(i+1, ulEndIndex, astWishList);
+
+    return;
 }
 
 ULONG SIM_ShiftDate(IN ULONG ulCurrDate, IN ULONG ulCodeCnt, INOUT SIM_STOCK_DATA_S *pstAllStockData)
@@ -427,7 +445,7 @@ ULONG SIM_GetOption(IN ULONG ulArgCnt, IN CHAR **ppcArgv, OUT SIM_OPTION_S *pstO
     pstOpt->szStock     = "all";
     pstOpt->bIsDebug    = BOOL_FALSE;
     pstOpt->bIsVerbose  = BOOL_FALSE;
-    pstOpt->szParam     = "(13, 30)";
+    pstOpt->szParam     = "(13, 50)";
 
     for (i=1,ulOptCnt=0;i<ulArgCnt;i+=2) {
         if(ppcArgv[i][0] != '-') {
@@ -546,6 +564,8 @@ int main(int argc,char *argv[])
     /* init parameter */
     SIM_GetOption(argc, argv, &stOption);
     g_bIsDebugMode = stOption.bIsDebug;
+    g_bIsVerbose   = stOption.bIsVerbose;
+    g_stSimSummary.szParam = stOption.szParam;
     SIM_GetMethod(stOption.szMethod);
     SIM_SetParam(stOption.szParam);
     ulCodeCnt = GetCodeList(stOption.szStock, &pulCodeList);
@@ -599,7 +619,9 @@ int main(int argc,char *argv[])
         // get wish list
         stAccount.ulWishCnt = SIM_GetWishList(ulCurrDate, ulCodeCnt, astStockData, stAccount.astWishList);
 
-        //g_pfSortWishList(ulWishCnt, stAccount.astWishList);   // sort wishlist
+        // sort wishlist
+        if (stAccount.ulWishCnt > 0)
+            SIM_SortWishList(0, stAccount.ulWishCnt-1, stAccount.astWishList);
 
         // update capital
         pstCapLine->ulDate=ulCurrDate;
@@ -610,7 +632,8 @@ int main(int argc,char *argv[])
         ulNextDate = SIM_ShiftDate(ulCurrDate, ulCodeCnt, astStockData);
     }
     // print capital line
-    SIM_PrintCapInfo(ulActualDayCnt, astCapLine);
+    if (BOOL_TRUE == g_bIsVerbose)
+        SIM_PrintCapInfo(ulActualDayCnt, astCapLine);
 
     // print summary
     pstCapLine--;

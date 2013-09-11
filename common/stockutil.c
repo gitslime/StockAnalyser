@@ -101,6 +101,59 @@ ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMea
     return (ULONG)((FLOAT)ulSum/ulDays);
 }
 
+ULONG GetMeanBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean)
+{
+    FLOAT fSum=0;
+    FLOAT fMulti = 1;
+    FLOAT fAdder = 0;
+
+    if (INVAILD_ULONG == ulPrevMean) {
+        ULONG i;
+
+        for (i=0;i<ulDays;i++) {
+            if (FILE_VAILD_FACTOR == pstData->stFactor.ulFlag) {
+                fMulti *= pstData->stFactor.fMulti;
+                fAdder += pstData->stFactor.fAdder;
+            }
+
+            fSum += pstData->stDailyPrice.ulEnd/fMulti - fAdder;
+            pstData--;
+        }
+    }
+    else {
+        if (FILE_VAILD_FACTOR == pstData->stFactor.ulFlag) {
+            fMulti *= pstData->stFactor.fMulti;
+            fAdder += pstData->stFactor.fAdder;
+        }
+
+        fSum=(FLOAT)ulDays*ulPrevMean;
+        fSum+=pstData->stDailyPrice.ulEnd/fMulti - fAdder;
+        pstData-=ulDays;
+        fSum-=pstData->stDailyPrice.ulEnd;
+        
+    }
+
+    return (ULONG)(fSum/ulDays);
+}
+
+// get First derivative of move average. first derivative = current ma - previous ma
+INT GetMeanFdBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData)
+{
+    ULONG ulPrevMa=GetMeanBackward(ulDays, pstData-1, INVAILD_ULONG);
+    ULONG ulCurrMa=GetMeanBackward(ulDays, pstData, ulPrevMa);
+
+    return (((INT)ulCurrMa)-((INT)ulPrevMa));
+}
+
+INT GetMeanSdBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData)
+{
+    INT iPPrevMa = (INT)GetMeanBackward(ulDays, pstData-2, INVAILD_ULONG);
+    INT iPrevMa  = (INT)GetMeanBackward(ulDays, pstData-1, iPPrevMa);
+    INT iCurrMa  = (INT)GetMeanBackward(ulDays, pstData, iPrevMa);
+
+    return ((iCurrMa-iPrevMa)-(iPrevMa-iPPrevMa));
+}
+
 FLOAT GetVolRatio(IN FILE_WHOLE_DATA_S *pstData)
 {
     FILE_WHOLE_DATA_S *pstPrev = pstData-1;

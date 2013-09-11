@@ -14,7 +14,7 @@ VOID RISE_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
     return;
 }
 
-VOID RISE_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT ULONG *aulWishList)
+VOID RISE_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT SIM_WISH_LIST_S *astWishList)
 {
     return;
 }

@@ -8,7 +8,7 @@
     extern ULONG METHOD##_GetLossPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
     extern ULONG METHOD##_GetBuyPrice(IN FILE_WHOLE_DATA_S *pstCurrData, IN ULONG ulWishPrice);  \
     extern ULONG METHOD##_GetSellPrice(IN FILE_WHOLE_DATA_S *pstCurrData, INOUT STOCK_CTRL_S *pstStockCtrl); \
-    extern ULONG METHOD##_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT ULONG *aulWishList); \
+    extern ULONG METHOD##_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOUT SIM_WISH_LIST_S *astWishList); \
     extern VOID METHOD##_SetParam(IN ULONG ulCnt, IN FLOAT *afParam);
 
 #define METHOD_RISE      (0x0001)

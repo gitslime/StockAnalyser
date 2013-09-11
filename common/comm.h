@@ -14,6 +14,7 @@ typedef unsigned long ULONG;
 typedef unsigned char UCHAR;
 typedef char CHAR;
 typedef long LONG;
+typedef int INT;
 typedef float FLOAT;
 typedef short SHORT;
 typedef USHORT BOOL_T;
@@ -77,6 +78,14 @@ typedef struct tagStockData
     FILE_WHOLE_DATA_S *astWholeData;
 }SIM_STOCK_DATA_S;
 
+typedef struct tagWishList
+{
+    ULONG ulCode;
+    ULONG ulIndex;
+    ULONG ulWishPrice;
+    FLOAT fWeight;      // sort by higher weight first
+}SIM_WISH_LIST_S;
+
 typedef struct tagPreDealInfo
 {
     BOOL_T bIsSell;     //true:sell; false:buy
@@ -84,6 +93,7 @@ typedef struct tagPreDealInfo
     USHORT usDealMin;
     BOOL_T bIsHigher;   //true:higher; false:lower
     FLOAT  fThresholdPrice;
+    FLOAT  fWeight;
 }CHOOSE_PRE_DEAL_S;
 
 typedef struct tagStockCtrl
@@ -150,6 +160,8 @@ VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData, OUT FLOA
 ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean);
 ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate);
 ULONG GetBuyCnt(IN ULONG ulHandLimit, IN ULONG ulBuyPrice);
+ULONG GetMeanBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean);
+INT GetMeanFdBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData);
 
 #define CANDLE_TYPE_LINE                (1UL)
 #define CANDLE_TYPE_T_INVERSE           (2UL)
