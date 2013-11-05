@@ -10,11 +10,17 @@
 /* type begin */
 typedef void VOID;
 typedef unsigned short USHORT;
+typedef unsigned int UINT32;
 typedef unsigned long ULONG;
 typedef unsigned char UCHAR;
 typedef char CHAR;
 typedef long LONG;
 typedef int INT;
+#ifdef LINUX
+typedef long long UINT64;
+#else
+typedef unsigned __int64 UINT64;
+#endif
 typedef float FLOAT;
 typedef short SHORT;
 typedef USHORT BOOL_T;
@@ -26,6 +32,14 @@ typedef USHORT BOOL_T;
 #define INOUT
 
 #define INVAILD_ULONG   (0xFFFFFFFF)
+#ifdef LINUX
+int LIB_Sprintf(IN CHAR *szBuf, IN int sizeOfBuffer,IN const char *szFmt, ... );
+#define sprintf_s LIB_Sprintf
+int LIB_FileOpen(OUT FILE **fp, IN const char *filename, IN const char *mode);
+#define fopen_s LIB_FileOpen
+#define vsprintf_s(a,b,c,d) vsprintf(a,c,d)
+#define _stricmp strcasecmp
+#endif
 /* type end */
 
 extern BOOL_T g_bIsDebugMode;
@@ -41,19 +55,20 @@ VOID DebugOutString(IN const CHAR *szFmt, ...);
 #define INDEX_CODE_CYB          (900004)
 ULONG GetCodeByIndex(IN CHAR *szIndex);
 
+#pragma pack (4)
 typedef struct tagPrice
 {
-    ULONG  ulBegin;
-    ULONG  ulHigh;
-    ULONG  ulLow;
-    ULONG  ulEnd;
-    ULONG  ulVol;
-    ULONG  ulFlag;
+    UINT32  ulBegin;
+    UINT32  ulHigh;
+    UINT32  ulLow;
+    UINT32  ulEnd;
+    UINT32  ulVol;
+    UINT32  ulFlag;
 }PRICE_S;
 
 typedef struct tagFactor
 {
-    ULONG ulFlag;
+    UINT32 ulFlag;
     FLOAT fMulti;
     FLOAT fAdder;
 }FACTOR_S;
@@ -61,18 +76,18 @@ typedef struct tagFactor
 typedef struct tagWholeData
 {
     CHAR  szComment[16];
-    ULONG ulDate;
-    ULONG ulRsv;
+    UINT32 ulDate;
+    UINT32 ulRsv;
     PRICE_S stDailyPrice;
     PRICE_S astMin30Price[8];
     FACTOR_S stFactor;
-    ULONG  ulPad;
+    UINT32  ulPad;
 }FILE_WHOLE_DATA_S;
 
 typedef struct tagStockData
 {
-    ULONG ulStockCode;
-    ULONG ulEntryCnt;
+    UINT32 ulStockCode;
+    UINT32 ulEntryCnt;
     BOOL_T bIsHold;     // for get wish list to skip hold stocks
     FILE_WHOLE_DATA_S *pstCurrData;
     FILE_WHOLE_DATA_S *astWholeData;
@@ -80,9 +95,9 @@ typedef struct tagStockData
 
 typedef struct tagWishList
 {
-    ULONG ulCode;
-    ULONG ulIndex;
-    ULONG ulWishPrice;
+    UINT32 ulCode;
+    UINT32 ulIndex;
+    UINT32 ulWishPrice;
     FLOAT fWeight;      // sort by higher weight first
 }SIM_WISH_LIST_S;
 
@@ -98,14 +113,15 @@ typedef struct tagPreDealInfo
 
 typedef struct tagStockCtrl
 {
-    //ULONG  ulWishPrice;
-    ULONG  ulGainPrice;
-    ULONG  ulLossPrice;
-    ULONG  ulBuyDate;
-    ULONG  ulBuyPrice;
-    ULONG  ulSellDate;
-    ULONG  ulSellPrice;
+    UINT32  ulGainPrice;
+    UINT32  ulLossPrice;
+    UINT32  ulBuyDate;
+    UINT32  ulBuyPrice;
+    UINT32  ulSellDate;
+    UINT32  ulSellPrice;
+    FLOAT  fContext;
 }STOCK_CTRL_S;
+#pragma pack ()
 
 #define FILE_TYPE_THS           0x10000000
 #define FILE_TYPE_THS_MIN5      0x10000005
@@ -118,7 +134,7 @@ typedef struct tagStockCtrl
 #define FILE_VAILD_PRICE    0xCCCCCCCC
 
 #define FILE_PRICE2REAL(FilePrice)     (((FLOAT)(FilePrice))/(1000))
-#define FILE_REAL2PRICE(FilePrice)     ((ULONG)((FilePrice)*(1000)))
+#define FILE_REAL2PRICE(FilePrice)     ((UINT64)((FilePrice)*(1000)))
 
 #define DATE_BREAKDOWN(ulDate, ulYear, ulMon, ulDay)    \
 {                                       \
@@ -157,11 +173,15 @@ FLOAT RandomFloat(IN FLOAT fMin, IN FLOAT fMax);
 
 BOOL_T IsVaildDate(IN ULONG ulDate);
 VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData, OUT FLOAT *pfMulti, OUT FLOAT *pfAdder);
+ULONG GetDailyLow(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData);
+ULONG GetDailyHigh(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData);
 ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean);
 ULONG GetDateInterval(IN ULONG ulStartDate, IN ULONG ulEndDate);
 ULONG GetBuyCnt(IN ULONG ulHandLimit, IN ULONG ulBuyPrice);
 ULONG GetMeanBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean);
 INT GetMeanFdBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData);
+INT GetMeanSdBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData);
+ULONG GetMeanByVolWeight(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData);
 
 #define CANDLE_TYPE_LINE                (1UL)
 #define CANDLE_TYPE_T_INVERSE           (2UL)
@@ -192,6 +212,11 @@ typedef struct tagSllNode{
 VOID SLL_InsertInTail(IN SLL_NODE_S *pstHead, IN SLL_NODE_S *pstNode);
 VOID SLL_DeleteNode(IN SLL_NODE_S *pstHead, IN SLL_NODE_S *pstNode);
 VOID SLL_FreeAll(IN SLL_NODE_S *pstHead);
+
+#define TREND_RISE  (1UL)
+#define TREND_DROP  (2UL)
+#define TREND_FLAT  (3UL)
+ULONG GetMaTrend(IN ULONG ulDays, IN ULONG ulCurrMa, IN ULONG ulPrevMa);
 
 #endif
 

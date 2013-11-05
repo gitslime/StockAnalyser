@@ -7,7 +7,7 @@
 
 ULONG SMA_GetMinIndex(VOID)
 {
-    return MAX(SMA_MEAN_DAYS,SMA_CHECK_DAYS);
+    return SMA_CHECK_DAYS;
 }
 
 VOID SMA_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
@@ -17,20 +17,21 @@ VOID SMA_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
 
 #define SMA_MA_THRETHOLD        (1.000F)
 
-BOOL_T SMA_Statistics(IN FILE_WHOLE_DATA_S *pstBuyData)
+VOID SMA_Statistics(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstBuyData)
 {
-    ULONG ulPrevMa, ulBaseMa, ulChooseMa;
-    FILE_WHOLE_DATA_S *pstChoose=pstBuyData-1;
-    FILE_WHOLE_DATA_S *pstBase=pstBuyData-2;
-    FILE_WHOLE_DATA_S *pstPrev=pstBase-1;
+    ULONG ulMa, ulWma;
+    FLOAT fRate;
 
-    ulPrevMa=GetMean(SMA_MEAN_DAYS,pstPrev,INVAILD_ULONG);
-    ulBaseMa=GetMean(SMA_MEAN_DAYS,pstBase,ulPrevMa);
-    ulChooseMa=GetMean(SMA_MEAN_DAYS,pstChoose,ulBaseMa);
+    if (ulIndex < SMA_CHECK_DAYS) return;
 
-    printf("%f,%f,", GET_RATE(ulBaseMa, ulPrevMa), GET_RATE(ulChooseMa,ulBaseMa));
+    ulMa=GetMean(SMA_MEAN_DAYS,pstBuyData,INVAILD_ULONG);
+    //ulWma=GetMeanByVolWeight(SMA_MEAN_DAYS,pstBuyData);
+    //(VOID)GetTotalRise(1,pstBuyData,RISE_TYPE_END,&fRate);
 
-    return BOOL_TRUE;
+    //if (fRate < STOCK_RISE_THREASHOLD)
+        printf("%lu,%lu,%f\n",pstBuyData->ulDate, pstBuyData->stDailyPrice.ulEnd, pstBuyData->stDailyPrice.ulEnd/(FLOAT)ulMa-1);
+
+    return;
 }
 
 #define SMA_BUY_HOUR           (14)

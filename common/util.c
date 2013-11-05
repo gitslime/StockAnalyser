@@ -67,17 +67,6 @@ ULONG GetIndexByDate(IN ULONG ulDate, IN ULONG ulFlag, IN ULONG ulEntryCnt, IN F
     return ((ULONG)iMid >= ulEntryCnt) ? INVAILD_ULONG : (ULONG)iMid;
 }
 
-ULONG GetCurrentDate(VOID)
-{
-    time_t RawTime; 
-    struct tm LocalTime;
-    
-    time(&RawTime); 
-    localtime_s (&LocalTime, &RawTime);
-
-    return DATE_ASSEMBLE(LocalTime.tm_year, LocalTime.tm_mon, LocalTime.tm_mday);
-}
-
 ULONG GetDayto1904(IN ULONG ulDate)
 {
 #define PARAM_DAYS_OF_4YEAR     (365*4+1)
@@ -124,7 +113,7 @@ BOOL_T IsVaildDate(IN ULONG ulDate)
     ULONG ulCheckDate=ulDate;
     ULONG ulDateEachMon[13]={0,31,28,31,30,31,30,31,31,30,31,30,31};
     
-    DATE_BREAKDOWN(ulDate,ulYear,ulMon,ulDay);
+    DATE_BREAKDOWN(ulCheckDate,ulYear,ulMon,ulDay);
 
     if ((ulYear < 1990) || (ulYear > 2050)) return BOOL_FALSE;
     if ((ulMon < 1) || (ulMon > 12)) return BOOL_FALSE;
@@ -204,5 +193,49 @@ VOID SLL_FreeAll(IN SLL_NODE_S *pstHead)
     return;
 }
 
+#ifdef LINUX
+int LIB_Sprintf(IN CHAR *szBuf, IN int sizeOfBuffer,IN const char *szFmt, ... )
+{
+    int StrSize;
+    va_list pArg;  
+    
+    va_start(pArg,szFmt);
+    StrSize = vsprintf(szBuf, szFmt, pArg);
+    va_end(pArg);
+
+    return StrSize;
+}
+
+int LIB_FileOpen(OUT FILE **fp, IN const char *filename, IN const char *mode)
+{
+    if (fp == NULL) return -1;
+
+    *fp = fopen(filename, mode);
+    return 0;
+}
+
+ULONG GetCurrentDate(VOID)
+{
+    time_t RawTime; 
+    struct tm *pLocalTime;
+
+    RawTime = time(NULL); 
+    pLocalTime = localtime (&RawTime);
+
+    return DATE_ASSEMBLE(pLocalTime->tm_year, pLocalTime->tm_mon, pLocalTime->tm_mday);
+}
+#else
+ULONG GetCurrentDate(VOID)
+{
+    time_t RawTime; 
+    struct tm LocalTime;
+    
+    time(&RawTime); 
+    localtime_s (&LocalTime, &RawTime);
+
+    return DATE_ASSEMBLE(LocalTime.tm_year, LocalTime.tm_mon, LocalTime.tm_mday);
+}
+
+#endif
 
 

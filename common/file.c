@@ -16,16 +16,16 @@ VOID FILE_GetFileName(IN ULONG ulStockCode, IN const CHAR* szFileDir, IN ULONG u
     szFileName[0] = 0;
     switch (ulFlag) {
         case FILE_TYPE_THS_MIN5:
-            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%s/%s/%06u.%s", szFileDir, pcDir, "min5", ulStockCode, "mn5"); 
+            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%s/%s/%06lu.%s", szFileDir, pcDir, "min5", ulStockCode, "mn5"); 
             break;
         case FILE_TYPE_THS_DAY:
-            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%s/%s/%06u.%s", szFileDir, pcDir, "day", ulStockCode, "day"); 
+            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%s/%s/%06lu.%s", szFileDir, pcDir, "day", ulStockCode, "day"); 
             break;
         case FILE_TYPE_QL_WGT:
-            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%s/weight/%06u.wgt", szFileDir, pcDir, ulStockCode);
+            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%s/weight/%06lu.wgt", szFileDir, pcDir, ulStockCode);
             break;
         case FILE_TYPE_CUSTOM:
-            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%06u.all", szFileDir, ulStockCode); 
+            sprintf_s(szFileName, FILE_NAME_LEN, "%s/%06lu.all", szFileDir, ulStockCode); 
             break;
         default:
             assert(0);
@@ -123,12 +123,14 @@ ULONG FILE_GetFileData(IN ULONG ulStockCode, IN const CHAR *szDir, IN ULONG ulFi
     ulFileSize  = FILE_GetFileSize(fp);
     ulFileHead  = FILE_GetFileHead(ulFileType);
     ulEntrySize = FILE_GetEntrySize(ulFileType);
+    DebugOutString("code=%lu, file size=%lu, file head=%lu, entry size=%lu\n",
+                   ulStockCode,ulFileSize,ulFileHead,ulEntrySize);
     
     ulFileSize -= ulFileHead;
     assert(0 == (ulFileSize%ulEntrySize));
     ulEntryCnt = ulFileSize/ulEntrySize;
     assert(0!=ulEntryCnt);
-    DebugOutString("file %s entry=%u\n", szFileName, ulEntryCnt);
+    DebugOutString("file %s entry=%lu\n", szFileName, ulEntryCnt);
 
     *ppFileData = malloc(ulFileSize);
     assert(NULL != *ppFileData);
@@ -196,7 +198,7 @@ ULONG FILE_GetVol(IN ULONG ulFileVol)
             ulMulti = 1;
             break;
         default:
-            printf("multi=0x%x", ulMulti);
+            printf("multi=0x%lx", ulMulti);
             assert(0);
     }
 

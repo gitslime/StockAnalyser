@@ -13,13 +13,13 @@ VOID CHOOSE_Track(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ul
     FILE_WHOLE_DATA_S *astWholeData = NULL;
     FILE_WHOLE_DATA_S *pstLatestData = NULL;
     
-    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, &astWholeData);
+    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, (VOID**)&astWholeData);
     if (0 == ulEntryCnt) return;
 
     ulIndex = GetIndexByDate(ulDate, INDEX_EXACT, ulEntryCnt, astWholeData);
     if (INVAILD_ULONG == ulIndex) {
         free(astWholeData);
-        DebugOutString("invalid date=%u, code=%06u\n", ulDate, ulCode);
+        DebugOutString("invalid date=%lu, code=%06lu\n", ulDate, ulCode);
         return;
     }
     pstLatestData=&astWholeData[ulEntryCnt-1];
@@ -27,6 +27,7 @@ VOID CHOOSE_Track(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ul
 
     // get function by method
     METHOD_GetFuncSet(ulMethod, &stMethodFunc);
+    stMethodFunc.pfSetParam(0, NULL);
 
     // fill stock ctrl
     memset(&stStockCtrl, 0, sizeof(stStockCtrl));
@@ -41,7 +42,7 @@ VOID CHOOSE_Track(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULONG ul
                     (stStockCtrl.ulGainPrice-ulLatestEndPrice) : 10;
     ulLossPriceDiff=(ulLatestEndPrice>(stStockCtrl.ulLossPrice+10)) ? 
                     (ulLatestEndPrice-stStockCtrl.ulLossPrice) : 10;
-    printf("%06u,%u,%.2f,%.2f,%u,%.2f,%u\n",
+    printf("%06lu,%lu,%.2f,%.2f,%lu,%.2f,%lu\n",
            ulCode, stStockCtrl.ulBuyDate, FILE_PRICE2REAL(ulLatestEndPrice),
            FILE_PRICE2REAL(stStockCtrl.ulLossPrice), ulLossPriceDiff/10,
            FILE_PRICE2REAL(stStockCtrl.ulGainPrice), ulGainPriceDiff/10);
@@ -59,30 +60,31 @@ VOID CHOOSE_Distribute(IN ULONG ulCode, IN ULONG ulDate, IN CHAR * szDir, IN ULO
     Choose_PF pfChoose = NULL;
     FILE_WHOLE_DATA_S *astWholeData = NULL;
     
-    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, &astWholeData);
+    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, (VOID**)&astWholeData);
     if (0 == ulEntryCnt) return;
 
     ulIndex = GetIndexByDate(ulDate, INDEX_PREV, ulEntryCnt, astWholeData);
     if (INVAILD_ULONG == ulIndex) {
         free(astWholeData);
-        DebugOutString("invalid date=%u, code=%06u\n", ulDate, ulCode);
+        DebugOutString("invalid date=%lu, code=%06lu\n", ulDate, ulCode);
         return;
     }
 
     // get choose function by method
     METHOD_GetFuncSet(ulMethod, &stMethodFunc);
     pfChoose = stMethodFunc.pfDailyChoose;
+    stMethodFunc.pfSetParam(0, NULL);
     bIsDeal = pfChoose(ulIndex, &astWholeData[ulIndex], &stDealInfo);
 
     free(astWholeData);
 
     if (BOOL_TRUE == bIsDeal) {
-        printf("%06u,%u,%u,%u,%u,%.2f\n",
+        printf("%06lu,%u,%u,%u,%u,%.2f\n",
                ulCode, stDealInfo.bIsSell, stDealInfo.usDealHour, stDealInfo.usDealMin, 
                stDealInfo.bIsHigher, stDealInfo.fThresholdPrice);
     }
     else {
-        DebugOutString("%06u not in deal\n",ulCode);
+        DebugOutString("%06lu not in deal\n",ulCode);
     }
 
     return;

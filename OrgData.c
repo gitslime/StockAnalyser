@@ -20,11 +20,11 @@ VOID FILE_UpdateDailyPrice(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
     assert(NULL != szTrgDir);
 
     //get source data and original data
-    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_THS_DAY, &astDailyData);
+    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_THS_DAY, (VOID**)&astDailyData);
     if (0==ulSrcEntryCnt) return;
     
     //original file maybe not exist
-    ulOgEntryCnt = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, &astOgData);
+    ulOgEntryCnt = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, (VOID**)&astOgData);
 
     astWholeData = malloc(sizeof(FILE_WHOLE_DATA_S) * (ulSrcEntryCnt+ulOgEntryCnt));
     assert(NULL != astWholeData);
@@ -100,10 +100,10 @@ VOID FILE_UpdateMin30Price(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
     assert(NULL != szSrcDir);
     assert(NULL != szTrgDir);
 
-    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_THS_MIN5, &astMin5Data);
+    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_THS_MIN5, (VOID**)&astMin5Data);
     if (0 == ulSrcEntryCnt) return;
     
-    ulOgEntryCnt  = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, &astOgData);
+    ulOgEntryCnt  = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, (VOID**)&astOgData);
     assert(0!=ulOgEntryCnt);
 
     i = j = 0;
@@ -122,7 +122,7 @@ VOID FILE_UpdateMin30Price(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CH
 
         if (ulCurrDate != pstOgData->ulDate) {
             //min 5 date is not in the original date
-            printf("daily entry of %d is not exist\n", ulCurrDate);
+            printf("daily entry of %ld is not exist\n", ulCurrDate);
             break;
         }
 
@@ -154,10 +154,10 @@ VOID FILE_UpdateWeight(IN ULONG ulCode, IN const CHAR *szSrcDir, IN const CHAR *
     assert(NULL != szSrcDir);
     assert(NULL != szTrgDir);
 
-    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_QL_WGT, &astWgtData);
+    ulSrcEntryCnt = FILE_GetFileData(ulCode, szSrcDir, FILE_TYPE_QL_WGT, (VOID**)&astWgtData);
     if (0 == ulSrcEntryCnt) return;
 
-    ulOgEntryCnt  = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, &astOgData);
+    ulOgEntryCnt  = FILE_GetFileData(ulCode, szTrgDir, FILE_TYPE_CUSTOM, (VOID**)&astOgData);
     assert(0!=ulOgEntryCnt);
     
     pstWgtData   = astWgtData;

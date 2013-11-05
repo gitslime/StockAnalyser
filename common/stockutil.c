@@ -79,6 +79,41 @@ VOID GetFactor(IN ULONG ulStartDate, IN FILE_WHOLE_DATA_S *pstCurrData,
     return;
 }
 
+ULONG GetMaTrend(IN ULONG ulDays, IN ULONG ulCurrMa, IN ULONG ulPrevMa)
+{
+    FLOAT fThreshold = 0.5F / ulDays;
+    FLOAT fRate = (((FLOAT)ulCurrMa) / ulPrevMa) - 1;
+
+    if (fRate > fThreshold) return TREND_RISE;
+    if (fRate < (0-fThreshold)) return TREND_DROP;
+
+    return TREND_FLAT;
+}
+
+ULONG GetDailyLow(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData)
+{
+    ULONG ulLow = pstData->stDailyPrice.ulLow;
+    ULONG i;
+
+    for (i=0;i<ulDays;i++,pstData--) {
+        ulLow = MIN(ulLow, pstData->stDailyPrice.ulLow);
+    }
+
+    return ulLow;
+}
+
+ULONG GetDailyHigh(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData)
+{
+    ULONG ulHigh = pstData->stDailyPrice.ulHigh;
+    ULONG i;
+
+    for (i=0;i<ulDays;i++,pstData--) {
+        ulHigh = MAX(ulHigh, pstData->stDailyPrice.ulHigh);
+    }
+
+    return ulHigh;
+}
+
 ULONG GetMean(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData, IN ULONG ulPrevMean)
 {
     ULONG ulSum=0;
@@ -152,6 +187,22 @@ INT GetMeanSdBackward(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData)
     INT iCurrMa  = (INT)GetMeanBackward(ulDays, pstData, iPrevMa);
 
     return ((iCurrMa-iPrevMa)-(iPrevMa-iPPrevMa));
+}
+
+ULONG GetMeanByVolWeight(IN ULONG ulDays, IN FILE_WHOLE_DATA_S *pstData)
+{
+    ULONG i;
+    ULONG ulVolSum = 0;
+    UINT64 ulPriceSum = 0;
+    FILE_WHOLE_DATA_S *pstCurr=pstData-ulDays+1;
+
+    for (i=0;i<ulDays;i++) {
+        ulVolSum += pstCurr->stDailyPrice.ulVol;
+        ulPriceSum += pstCurr->stDailyPrice.ulEnd * pstCurr->stDailyPrice.ulVol;
+        pstCurr++;
+    }
+
+    return (ULONG)(ulPriceSum/ulVolSum);
 }
 
 FLOAT GetVolRatio(IN FILE_WHOLE_DATA_S *pstData)

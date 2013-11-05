@@ -20,7 +20,7 @@ VOID CHECK_CheckOne(IN ULONG ulCode, IN ULONG ulStartDate, IN CHAR *szDir)
     PRICE_S *pstMin30Price = NULL;
     PRICE_S *pstDailyPrice = NULL;
 
-    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, &astWholeData);
+    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, (VOID**)&astWholeData);
     if (0 == ulEntryCnt) {
         printf("can't get data\n");
         return;
@@ -28,7 +28,7 @@ VOID CHECK_CheckOne(IN ULONG ulCode, IN ULONG ulStartDate, IN CHAR *szDir)
 
     // check start date
     if (ulStartDate != astWholeData[0].ulDate) {
-        printf("start date = %u, data has %u\n", ulStartDate, astWholeData[0].ulDate);
+        printf("start date = %lu, data has %lu\n", ulStartDate, astWholeData[0].ulDate);
     }
 
     // check daily price
@@ -36,11 +36,11 @@ VOID CHECK_CheckOne(IN ULONG ulCode, IN ULONG ulStartDate, IN CHAR *szDir)
     pstCurrData = pstPrevData+1;
     for (i=1;i<ulEntryCnt;i++,pstPrevData++,pstCurrData++) {
         if (INVAILD_ULONG != pstCurrData->ulRsv) {
-            printf("%u data invalid!\n", pstCurrData->ulDate);
+            printf("%lu data invalid!\n", pstCurrData->ulDate);
         }
 
         if (pstCurrData->ulDate <= pstPrevData->ulDate) {
-            printf("%u data reverse!\n",  pstCurrData->ulDate);
+            printf("%lu data reverse!\n",  pstCurrData->ulDate);
         }
     }
 
@@ -48,7 +48,7 @@ VOID CHECK_CheckOne(IN ULONG ulCode, IN ULONG ulStartDate, IN CHAR *szDir)
     pstCurrData = astWholeData;
     for (i=0;i<ulEntryCnt;i++,pstCurrData++) {
         if (FILE_VAILD_PRICE == pstCurrData->astMin30Price[0].ulFlag) {
-            DebugOutString("MIN30 starts at %u\n", pstCurrData->ulDate);
+            DebugOutString("MIN30 starts at %lu\n", pstCurrData->ulDate);
             break;
         }
     }
@@ -69,22 +69,22 @@ VOID CHECK_CheckOne(IN ULONG ulCode, IN ULONG ulStartDate, IN CHAR *szDir)
         }
 
         if (0 == j) {
-            printf("%u min30 price miss!\n", pstCurrData->ulDate);
+            printf("%lu min30 price miss!\n", pstCurrData->ulDate);
             continue;
         }
 
         // each price has different range
         pstDailyPrice = &(pstCurrData->stDailyPrice);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulBegin, pstDailyPrice->ulBegin, 3))
-            printf("%u begin price not march! %u VS %u\n", pstCurrData->ulDate, ulBegin, pstDailyPrice->ulBegin);
+            printf("%lu begin price not march! %lu VS %lu\n", pstCurrData->ulDate, ulBegin, pstDailyPrice->ulBegin);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulHigh, pstDailyPrice->ulHigh, 6))
-            printf("%u high price not march! %u VS %u\n", pstCurrData->ulDate, ulHigh, pstDailyPrice->ulHigh);
+            printf("%lu high price not march! %lu VS %lu\n", pstCurrData->ulDate, ulHigh, pstDailyPrice->ulHigh);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulLow, pstDailyPrice->ulLow, 6))
-            printf("%u low price not march! %u VS %u\n", pstCurrData->ulDate, ulLow, pstDailyPrice->ulLow);
+            printf("%lu low price not march! %lu VS %lu\n", pstCurrData->ulDate, ulLow, pstDailyPrice->ulLow);
         if (BOOL_FALSE == CHECK_IsPriceFit(ulEnd, pstDailyPrice->ulEnd, 4))
-            printf("%u end price not march! %u VS %u\n", pstCurrData->ulDate, ulEnd, pstDailyPrice->ulEnd);
+            printf("%lu end price not march! %lu VS %lu\n", pstCurrData->ulDate, ulEnd, pstDailyPrice->ulEnd);
         if ((pstDailyPrice->ulVol < ulVol-25) || (pstDailyPrice->ulVol > ulVol+10))
-            printf("%u volume not march! %u VS %u\n", pstCurrData->ulDate, pstDailyPrice->ulVol, ulVol);
+            printf("%lu volume not march! %lu VS %lu\n", pstCurrData->ulDate, pstDailyPrice->ulVol, ulVol);
     }
     free(astWholeData);
     
@@ -111,16 +111,16 @@ int main(int argc,char *argv[])
     ulCodeCnt = GetCodeList(argv[3], &pulCodeList);
 
     for (i=0;i<ulCodeCnt;i++) {
-        ulWgtCnt = FILE_GetFileData(pulCodeList[i], argv[2], FILE_TYPE_QL_WGT, &astWgtData);
+        ulWgtCnt = FILE_GetFileData(pulCodeList[i], argv[2], FILE_TYPE_QL_WGT, (VOID**)&astWgtData);
         if (0 == ulWgtCnt) {
-            printf("weight of %06u not exist!\n", pulCodeList[i]);
+            printf("weight of %06lu not exist!\n", pulCodeList[i]);
             continue;
         }
 
         ulStartDate = FILE_QlDate2Custom(astWgtData[0].ulQlDate);
         free(astWgtData);
 
-        DebugOutString("========%06u========\n", pulCodeList[i]);
+        DebugOutString("========%06lu========\n", pulCodeList[i]);
         CHECK_CheckOne(pulCodeList[i], ulStartDate, argv[1]);
     }
 

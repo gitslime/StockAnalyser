@@ -5,8 +5,8 @@
 
 typedef struct tagMmaParam
 {
-    ULONG ulMaShort;
-    ULONG ulMaLong;
+    UINT32 ulMaShort;
+    UINT32 ulMaLong;
 }MMA_PARAM_S;
 
 MMA_PARAM_S g_stMmaParam;
@@ -20,7 +20,7 @@ MMA_PARAM_S g_stMmaParam;
 
 VOID MMA_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
 {
-    assert(ulCnt == sizeof(MMA_PARAM_S)/sizeof(ULONG));
+    assert(ulCnt == sizeof(MMA_PARAM_S)/sizeof(UINT32));
 
     g_stMmaParam.ulMaShort = (ULONG)afParam[0];
     g_stMmaParam.ulMaLong  = (ULONG)afParam[1];
@@ -30,9 +30,9 @@ VOID MMA_SetParam(IN ULONG ulCnt, IN FLOAT *afParam)
     return;
 }
 
-BOOL_T MMA_Statistics(IN FILE_WHOLE_DATA_S *pstSettleData)
+VOID MMA_Statistics(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstSettleData)
 {
-    return BOOL_TRUE;
+    return;
 }
 
 BOOL_T MMA_Choose(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstCurrData, OUT CHOOSE_PRE_DEAL_S *pstDealInfo)

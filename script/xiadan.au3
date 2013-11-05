@@ -6,6 +6,7 @@
 
 HotKeySet("{ESC}", "quit")
 Func quit ()
+   XiadanRestoreTime()
    Exit
 EndFunc
 			
@@ -97,8 +98,8 @@ Func XiadanSetPreDeal($Code, $IsSell, $Hour, $Min, $IsHigher, $Price)
    Local $SetPrice  = 100
    Local $Cnt = Floor($SetPrice/$Price) * 100
    
-   If $Cnt*$Price < 9200 Then Return 0
-   ;If $Cnt*$Price < 9200 Then $Cnt+=100
+   ;If $Cnt*$Price < 9200 Then Return 0
+   If $Cnt*$Price < 9200 Then $Cnt+=100
    
    Send($Code)
    Sleep(200)
@@ -160,9 +161,10 @@ Func XiadanGetHold ()
    
    Local $i = 2		; skip first line
    Local $HoldList[60][2]
+   Local $HoldId=0
    While ($i <= $Line[0])
 	  Local $Stock = StringSplit($Line[$i], @TAB)
-	  Local $HoldId = $Stock[2]
+	  $HoldId = $Stock[2]
 	  ;MsgBox(0, "code", $Stock[4]&$Stock[7])
 	  $HoldList[$HoldId][0]=$Stock[4]
 	  $HoldList[$HoldId][1]=$Stock[7]
@@ -307,7 +309,7 @@ Func XiadanGetTradeInfobyProgram ()
    ;Local $Date=20130805
    ;MsgBox(0, "Date", $Date)
    
-   Local $foo = Run("F:\StockAnalyser\build\StockAnalyser\Debug\Choose.exe sma F:\StockAnalyser\database "&$Date&" all", "", @SW_HIDE, $STDOUT_CHILD)
+   Local $foo = Run("F:\StockAnalyser\build\StockAnalyser\Debug\Choose.exe oma F:\StockAnalyser\database "&$Date&" all", "", @SW_HIDE, $STDOUT_CHILD)
    Local $Output
    While 1
 	  $Output = StdoutRead($foo)
@@ -398,6 +400,8 @@ Func XiadanTrack()
    $HoldList = XiadanGetHold()
    ; skip nihuigou
    Local $HoldCnt=$HoldList[0][0]
+   
+   If $HoldCnt=0 Then Return
    Send("{F10}")
    Sleep(50)
    

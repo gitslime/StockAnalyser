@@ -19,28 +19,23 @@ VOID RISE_SortWishList(IN ULONG ulWishCnt, IN SIM_STOCK_DATA_S *pstAllData, INOU
     return;
 }
 
-BOOL_T RISE_Statistics(IN FILE_WHOLE_DATA_S *pstSettleData)
+VOID RISE_Statistics(IN ULONG ulIndex, IN FILE_WHOLE_DATA_S *pstSettleData)
 {
-    ULONG i;
-    FLOAT afRise[RISE_WATCH_DAYS];
-    FILE_WHOLE_DATA_S *pstWatch = pstSettleData-RISE_WATCH_DAYS+1;
+    FLOAT fWatchRise;
+    FLOAT fPrevVolRate;
+    FLOAT fCurrRise;
 
-    // get each rise rate
-    for (i=0;i<RISE_WATCH_DAYS;i++,pstWatch++) {
-        (VOID)GetTotalRise(1, pstWatch, RISE_TYPE_END, &afRise[i]);
-    }
+    if (ulIndex <= RISE_WATCH_DAYS) return;
+    
+    (VOID)GetTotalRise(1, pstSettleData, RISE_TYPE_END, &fCurrRise);
+    if ((fCurrRise < -0.11) || (fCurrRise > 0.11)) return;
+    
+    (VOID)GetTotalRise(RISE_WATCH_DAYS, pstSettleData-1, RISE_TYPE_END, &fWatchRise);
+    fPrevVolRate=GetVolRatio(pstSettleData-1);
+    if ((fPrevVolRate>5) && (fWatchRise>0.1))
+    printf("%lu,%.5f,%.5f\n", pstSettleData->ulDate, fPrevVolRate, fCurrRise);
 
-    if (afRise[0]<0) return BOOL_FALSE;
-    for (i=1;i<RISE_WATCH_DAYS;i++,pstWatch++) {
-        // make sure rise higher and higher
-        if (afRise[i]<afRise[i-1]) return BOOL_FALSE;
-    }
-    printf("%d,", pstSettleData->ulDate);
-    for (i=0;i<RISE_WATCH_DAYS;i++,pstWatch++) {
-        printf("%.4f,", afRise[i]);
-    }
-
-    return BOOL_TRUE;
+    return;
 }
 
 #define RISE_CHOOSE_DAYS        (2)

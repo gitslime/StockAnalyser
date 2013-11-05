@@ -2494,7 +2494,7 @@ ULONG GetCodeList(IN CHAR* szCode, OUT ULONG **ppulList)
 
         if (g_ulTotalCount == i) {
             ulCodeCnt = 0;      // not found
-            DebugOutString("code %06u not found!\n", ulCode);
+            DebugOutString("code %06lu not found!\n", ulCode);
         }
         else {
             ulCodeCnt = 1;

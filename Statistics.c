@@ -26,7 +26,7 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
 {
     ULONG i, ulEntryCnt;
     ULONG ulBeginIndex, ulEndIndex;
-    ULONG ulThreshPrice;
+    //ULONG ulThreshPrice;
     METHOD_FUNC_SET_S stMethodFunc;
     Choose_PF pfChoose = NULL;
     Statistics_PF pfStat = NULL;
@@ -34,13 +34,13 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
     FILE_WHOLE_DATA_S *astWholeData = NULL;
     FILE_WHOLE_DATA_S *pstStatData = NULL;
 
-    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, &astWholeData);
+    ulEntryCnt = FILE_GetFileData(ulCode, szDir, FILE_TYPE_CUSTOM, (VOID**)&astWholeData);
     if (0 == ulEntryCnt) return;
 
     ulBeginIndex = GetIndexByDate(ulBeginDate, INDEX_NEXT, ulEntryCnt, astWholeData);
     ulEndIndex   = GetIndexByDate(ulEndDate,   INDEX_PREV, ulEntryCnt, astWholeData);
     if (ulBeginIndex>ulEndIndex) {
-        DebugOutString("%u: invaild begin date: %u, end date: %u\n", ulCode, ulBeginDate, ulEndDate);
+        DebugOutString("%lu: invaild begin date: %lu, end date: %lu\n", ulCode, ulBeginDate, ulEndDate);
         free(astWholeData);
         return;
     }
@@ -50,6 +50,7 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
     pfStat = stMethodFunc.pfStatistics;
     memset(&stDealInfo, 0, sizeof(stDealInfo));
     for (i=ulBeginIndex,pstStatData = &astWholeData[ulBeginIndex];i<=ulEndIndex;i++, pstStatData++) {
+        #if 0
         ulThreshPrice=FILE_REAL2PRICE(stDealInfo.fThresholdPrice);
         if (((BOOL_FALSE == stDealInfo.bIsHigher) && (pstStatData->stDailyPrice.ulLow < ulThreshPrice)) ||
             ((BOOL_FALSE != stDealInfo.bIsHigher) && (pstStatData->stDailyPrice.ulEnd > ulThreshPrice)))
@@ -64,6 +65,8 @@ VOID STAT_Distribute(IN ULONG ulCode, IN CHAR *szDir, IN ULONG ulMethod, IN ULON
         }
         
         (VOID)pfChoose(i, pstStatData, &stDealInfo);
+        #endif
+        pfStat(i, pstStatData);
     }
 
     free(astWholeData);

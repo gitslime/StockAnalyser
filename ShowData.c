@@ -36,31 +36,31 @@ VOID PrintSingleDay(IN FILE_WHOLE_DATA_S *pstEntry)
 
     printf("\n=============================================================================");
 
-    printf("\nDATE: %u", pstEntry->ulDate);
+    printf("\nDATE: %lu", pstEntry->ulDate);
     for (i=0;i<ulMin30Cnt;i++) {
-        printf("\t%u", aulMin[i]);
+        printf("\t%lu", aulMin[i]);
     }
     printf("\n=============================================================================");
     
-    printf("\nBEGIN:\t%u", pstEntry->stDailyPrice.ulBegin);
+    printf("\nBEGIN:\t%lu", pstEntry->stDailyPrice.ulBegin);
     for (i=0;i<ulMin30Cnt;i++) {
-        printf("\t%u", pstEntry->astMin30Price[i].ulBegin);
+        printf("\t%lu", pstEntry->astMin30Price[i].ulBegin);
     }
-    printf("\nHIGH:\t%u", pstEntry->stDailyPrice.ulHigh);
+    printf("\nHIGH:\t%lu", pstEntry->stDailyPrice.ulHigh);
     for (i=0;i<ulMin30Cnt;i++) {
-        printf("\t%u", pstEntry->astMin30Price[i].ulHigh);
+        printf("\t%lu", pstEntry->astMin30Price[i].ulHigh);
     }
-    printf("\nLOW:\t%u", pstEntry->stDailyPrice.ulLow);
+    printf("\nLOW:\t%lu", pstEntry->stDailyPrice.ulLow);
     for (i=0;i<ulMin30Cnt;i++) {
-        printf("\t%u", pstEntry->astMin30Price[i].ulLow);
+        printf("\t%lu", pstEntry->astMin30Price[i].ulLow);
     }
-    printf("\nEND:\t%u", pstEntry->stDailyPrice.ulEnd);
+    printf("\nEND:\t%lu", pstEntry->stDailyPrice.ulEnd);
     for (i=0;i<ulMin30Cnt;i++) {
-        printf("\t%u", pstEntry->astMin30Price[i].ulEnd);
+        printf("\t%lu", pstEntry->astMin30Price[i].ulEnd);
     }
-    printf("\nVOL:\t%u", pstEntry->stDailyPrice.ulVol);
+    printf("\nVOL:\t%lu", pstEntry->stDailyPrice.ulVol);
     for (i=0;i<ulMin30Cnt;i++) {
-        printf("\t%u", pstEntry->astMin30Price[i].ulVol);
+        printf("\t%lu", pstEntry->astMin30Price[i].ulVol);
     }
     printf("\n");
 
@@ -83,7 +83,7 @@ VOID ShowThsDaily(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_THS_DAILY_ENTRY_
     }
 
     if (i==ulEntryCnt) {
-        printf("date %d not found\n", ulDate);
+        printf("date %ld not found\n", ulDate);
         return;
     }
 
@@ -102,7 +102,7 @@ VOID ShowThsMin30(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_THS_MIN5_ENTRY_S
     ULONG ulStartDate = FILE_ThsMin2Date(pstEntry->ulMin);
 
     if (ulStartDate > ulDate) {
-        printf("Entry starts at %d.\n", ulStartDate);
+        printf("Entry starts at %ld.\n", ulStartDate);
         return;
     }
     ulShowMin = FILE_Date2ThsMin(ulDate);
@@ -112,7 +112,7 @@ VOID ShowThsMin30(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_THS_MIN5_ENTRY_S
     }
     
     if (i==ulEntryCnt) {
-        printf("date %d not found\n", ulDate);
+        printf("date %ld not found\n", ulDate);
         return;
     }
 
@@ -135,7 +135,7 @@ VOID ShowCustom(IN ULONG ulDate, IN ULONG ulEntryCnt, IN FILE_WHOLE_DATA_S *pstE
     
     ulIndex = GetIndexByDate(ulDate, INDEX_EXACT, ulEntryCnt, pstEntry);
     if (INVAILD_ULONG == ulIndex) {
-        printf("date %d not found\n", ulDate);
+        printf("date %ld not found\n", ulDate);
         return;
     }
     pstCurrent = pstEntry+ulIndex;
@@ -194,7 +194,7 @@ int main(int argc,char *argv[])
     ulStockCode = (ULONG)atol(argv[3]);
     ulShowDate  = (ULONG)atol(argv[4]);
     ulFileType  = GetFileType(argv[2]);
-    DebugOutString("code=%06u, date=%u, type=0x%08x\n", ulStockCode, ulShowDate, ulFileType);
+    DebugOutString("code=%06lu, date=%lu, type=0x%08lx\n", ulStockCode, ulShowDate, ulFileType);
 
     ShowFileContent(ulStockCode, ulShowDate, argv[1], ulFileType);
 
